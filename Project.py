@@ -8,26 +8,83 @@ from matplotlib import pyplot
 COMMA_SEPARATOR = ','
 FIRST = 0
 VERTICAL_ROTATION = 'vertical'
+TIME_COLUMN = 'time'
+CPI_COLUMN = 'CPI'
 
-time = []
-value = []
-xPlots = []
-with open('CPI - Inflation.csv', newline='') as csvFile:
+# Function
+def DisplayGraph(dataFrame):
+    pyplot.plot(dataFrame[TIME_COLUMN], dataFrame[CPI_COLUMN])
+    pyplot.xticks(rotation=VERTICAL_ROTATION)
+
+
+# End Functions
+
+data = pandas.DataFrame({})
+
+columns = []
+
+#Main
+with open('Inflation-data - hcpi_m.csv', newline='') as csvFile:
     cpiInflation = csv.reader(csvFile, delimiter=' ', quotechar='|')
-    index = 0
     for row in cpiInflation:
-        if index > 5:
-            values = row[FIRST].split(COMMA_SEPARATOR)
-            time.append(values[0])
-            value.append(float(values[1]))
-            xPlots.append(index)
-        index += 1
+        x = 0
+        if x == 1:
+            y = 0
+            for column in row:
+                if y == 5: 
+                    columns.append(column.split(COMMA_SEPARATOR))
+                y += 1
+        else:
+            for column in row:
+                columns.append(column.split(COMMA_SEPARATOR))
+        x += 1
 
-data = {'time': time, 'CPI': value}
-dataFrame = pandas.DataFrame(data)
+columnsNames = columns[5:6]
+columnsData = columns[7:]
+columnsData2 = []
 
-pyplot.plot(dataFrame['time'], dataFrame['CPI'])
-pyplot.xticks(rotation=VERTICAL_ROTATION)
+
+for rows in columnsData:
+    if len(rows) > 10:
+        values = []
+        for string in rows[1:640]:
+            try:
+                string = float(string)
+            except:
+                string = 0
+            values.append(string)
+        columnsData2.append(values)
+
+f,axes = pyplot.subplots(10, 10, figsize=(15, 8))
+for idx, ax in enumerate(axes.flatten()):
+    maxNum = float(max(columnsData2[idx])) + 100
+    y_plots = []
+    for i in range(0, round(maxNum + 1), 10):
+        y_plots.append(i)
+    ax.set_yticks(y_plots, y_plots)
+    ax.set_ylim(0, maxNum)
+    ax.set_xticks(columnsNames[1:])
+    ax.plot(columnsData2[idx], 'b.-')
+    ax.grid(True)
+
+pyplot.show()
+
+columnsNames = columnsNames[:640]
+
+print(columnsNames)
+print("------")
+print(columnsData2)
+
+
+
+data = {
+    TIME_COLUMN: columnsNames,
+    CPI_COLUMN: columnsData2
+}
+
+before = pandas.DataFrame(data)
+
+DisplayGraph(before)
 pyplot.show()
 
 CPI_RNN = keras.models.Sequential([
@@ -36,25 +93,18 @@ CPI_RNN = keras.models.Sequential([
     keras.layers.Dense(1)
 ])
 
-print(len(value))
-
-print(value[0:])
-print(value[0:len(value)])
-
-
 xTrain, yTrain = [value[0:80]], [value[0:80]]
-print("-----")
-print(xTrain)
-print(yTrain)
 
 CPI_RNN.compile(loss='mse', optimizer='adam')
 CPI_RNN.fit(xTrain, yTrain, epochs=1000)
 
 y_pred = CPI_RNN.predict([value[80:81]])
 
-data2 = {'time': time[:81], 'CPI': xTrain[:80].append(y_pred)}
-dataFrame2 = pandas.DataFrame(data)
+data2 = {
+        TIME_COLUMN: time[:81], 
+        CPI_COLUMN: xTrain[:80].append(y_pred)
+}
+results = pandas.DataFrame(data)
 
-pyplot.plot(dataFrame2['time'], dataFrame2['CPI'])
-pyplot.xticks(rotation=VERTICAL_ROTATION)
-pyplot.show()
+DisplayGraph(results)
+# End Main
