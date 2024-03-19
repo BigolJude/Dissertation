@@ -7,18 +7,18 @@ import sys
 import os
 import keras
 import sklearn
-import CPI_RNN
-import CPI_DataIngest
-import GraphHelper
-import CSV
+import DP_RNN
+import DP_DataIngest
+import DP_GraphHelper
+import DP_CSV
 
 sys.path.append(os.path.relpath("/"))
 
 from sklearn.preprocessing import MinMaxScaler
 from matplotlib import pyplot
-from CPI_RNN import CPI_RNN
-from CPI_DataIngest import *
-from CSV import *
+from DP_RNN import DP_RNN
+from DP_DataIngest import *
+from DP_CSV import *
 
 FIRST = 0
 
@@ -28,18 +28,30 @@ TIME_COLUMN = 'time'
 CPI_COLUMN = 'CPI'
 
 cpiInflationData = ReadCSV('Inflation-data - hcpi_m.csv')
-cpiInflationDataSplit = IngestData(cpiInflationData)
+wagesPerCountry = ReadCSV('WagesPerCountry_WorldBank.csv')
 
-xTrain, yTrain = cpiInflationDataSplit[:1800,:52], cpiInflationDataSplit[:1800, -1]
-xValid, yValid = cpiInflationDataSplit[1800:2000, :52], cpiInflationDataSplit[1800:2000, -1]
-xTest, yTest = cpiInflationDataSplit[2000:, :52], cpiInflationDataSplit[2000:, -1]
+cpiInflationDataRaw, cpiInflationDataSplit = IngestCPIData(cpiInflationData)
+wageDataCleanRaw, wageDataClean = IngestWageData(wagesPerCountry)
 
-GraphHelper.PlotTestData(xTrain)
+xTrain_CPI, yTrain_CPI = cpiInflationDataSplit[:1900, :48], cpiInflationDataSplit[:1900, -5:]
+xValid_CPI, yValid_CPI = cpiInflationDataSplit[1900:2000, :48], cpiInflationDataSplit[1900:2000, -5:]
+xTest_CPI, yTest_CPI = cpiInflationDataSplit[2000:, :48], cpiInflationDataSplit[2000:, -5:]
 
-cpi_rnn = CPI_RNN()
-cpi_rnn.train(xTrain, yTrain, xValid, yValid, True)
+xTrain_Wages, yTrain_Wages = wageDataClean[1:200,:59], wageDataClean[1:200, -5:]
+xValid_Wages, yValid_Wages = wageDataClean[200:210,:59], wageDataClean[200:210, -5:]
+xTest_Wages, yTest_Wages = wageDataClean[210:, :59], wageDataClean[210:, -5:]
 
-prediction = cpi_rnn.GetModel().predict(xTest)
+DP_GraphHelper.PlotTestData(xTrain_CPI)
+DP_GraphHelper.PlotTestData(xTrain_Wages)
+cpi_rnn = DP_RNN(initialLayerNeurons=80, epochs=10)
+wage_rnn = DP_RNN(initialLayerNeurons=100, epochs=15)
 
-GraphHelper.PlotSinglePredictedData(xTest, yTest, prediction)
+wage_rnn.train(xTrain_Wages, yTrain_Wages, xValid_Wages, yValid_Wages, True)
+cpi_rnn.train(xTrain_CPI, yTrain_CPI, xValid_CPI, yValid_CPI, True)
+
+cpi_prediction = cpi_rnn.GetModel().predict(xTest_CPI)
+wages_prediction = wage_rnn.GetModel().predict(xTest_Wages)
+
+DP_GraphHelper.PlotPredictedData(xTest_CPI, yTest_CPI, cpi_prediction)
+DP_GraphHelper.PlotPredictedData(xTest_Wages, yTest_Wages, wages_prediction)
 print('done')
