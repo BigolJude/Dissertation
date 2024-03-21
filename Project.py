@@ -62,8 +62,8 @@ cpi_rnn.train(xTrain_CPI, yTrain_CPI, xValid_CPI, yValid_CPI, True)
 cpi_prediction = cpi_rnn.GetModel().predict(xTest_CPI)
 wages_prediction = wage_rnn.GetModel().predict(xTest_Wages)
 
-#DP_GraphHelper.PlotPredictedData(xTest_CPI, cpi_prediction, yTest_CPI,)
-#DP_GraphHelper.PlotPredictedData(xTest_Wages, wages_prediction, yTest_Wages)
+DP_GraphHelper.PlotPredictedData(xTest_CPI, cpi_prediction, yTest_CPI,)
+DP_GraphHelper.PlotPredictedData(xTest_Wages, wages_prediction, yTest_Wages)
 
 lithuanian_prediction = wage_rnn.GetModel().predict([lithuanianWageData])
 
