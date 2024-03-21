@@ -5,17 +5,13 @@
 # - test the model with a full dataset.
 # - code clean up.
 
-
 import sys
 import os
 import DP_RNN
-import DP_DataIngest
 import DP_GraphHelper
-import DP_CSV
 
 sys.path.append(os.path.relpath("/"))
 
-from sklearn.preprocessing import MinMaxScaler
 from matplotlib import pyplot
 from DP_RNN import DP_RNN
 from DP_DataIngest import *
@@ -57,8 +53,8 @@ xTest_Wages, yTest_Wages = wageDataClean[210:, :59], wageDataClean[210:, -5:]
 DP_GraphHelper.PlotTestData(xTrain_CPI)
 DP_GraphHelper.PlotTestData(xTrain_Wages)
 
-cpi_rnn = DP_RNN(initialLayerNeurons=80, epochs=5)
-wage_rnn = DP_RNN(initialLayerNeurons=80, epochs=5)
+cpi_rnn = DP_RNN(initialLayerNeurons=100, epochs=15)
+wage_rnn = DP_RNN(initialLayerNeurons=200, epochs=30)
 
 wage_rnn.train(xTrain_Wages, yTrain_Wages, xValid_Wages, yValid_Wages, True)
 cpi_rnn.train(xTrain_CPI, yTrain_CPI, xValid_CPI, yValid_CPI, True)
@@ -66,10 +62,20 @@ cpi_rnn.train(xTrain_CPI, yTrain_CPI, xValid_CPI, yValid_CPI, True)
 cpi_prediction = cpi_rnn.GetModel().predict(xTest_CPI)
 wages_prediction = wage_rnn.GetModel().predict(xTest_Wages)
 
-DP_GraphHelper.PlotPredictedData(xTest_CPI, yTest_CPI, cpi_prediction)
-DP_GraphHelper.PlotPredictedData(xTest_Wages, yTest_Wages, wages_prediction)
+#DP_GraphHelper.PlotPredictedData(xTest_CPI, cpi_prediction, yTest_CPI,)
+#DP_GraphHelper.PlotPredictedData(xTest_Wages, wages_prediction, yTest_Wages)
 
 lithuanian_prediction = wage_rnn.GetModel().predict([lithuanianWageData])
 
-DP_GraphHelper.PlotPredictedData(lithuanianWageData, lithuanian_prediction)
+lithuanian_wages = []
+
+for wageDataPoint in lithuanianWageData:
+    lithuanian_wages.append(wageDataPoint * lithuanianMetaData[1])
+
+lithuanian_wage_predictions = []
+
+for wageDataPrediction in lithuanian_prediction[FIRST]:
+    lithuanian_wage_predictions.append(wageDataPrediction * lithuanianMetaData[1])
+
+DP_GraphHelper.PlotPredictedData(lithuanian_wages, [lithuanian_wage_predictions])
 print('done')

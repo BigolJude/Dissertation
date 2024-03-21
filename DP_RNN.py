@@ -24,7 +24,7 @@ class DP_RNN():
         self.__cpi_rnn.compile(loss=MEAN_ABSOLUTE_ERROR, optimizer=self.__optimizer, metrics=[keras.metrics.MeanAbsolutePercentageError()])
 
     def train(self, xTrain, yTrain, xValid, yValid, showHistory):
-        history = self.__cpi_rnn.fit(xTrain, yTrain, epochs=self.__epochs, batch_size=20, validation_data=[xValid, yValid])
+        history = self.__cpi_rnn.fit(xTrain, yTrain, epochs=self.__epochs, batch_size=10, validation_data=[xValid, yValid])
         if(showHistory):
             DP_GraphHelper.PlotTrainingHistory(history)
 

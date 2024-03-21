@@ -33,10 +33,24 @@ def __CleanData(data, dataRowLength, dataColumnStart, labelIndex):
             dataRow = []
             lastValid = 0
 
+            zeroCount = 0
+
             for index, value in enumerate(row[:640]):
                 if index > dataColumnStart:
+                    lastLastValid = lastValid
                     number, lastValid = __ConvertValueToFloat(value, lastValid)
+
+                    if number == 0:
+                        zeroCount += 1
+                    else:
+                        if zeroCount > 0:
+                            difference = (lastValid - lastLastValid) / zeroCount
+                            for i in range(zeroCount):
+                                dataIndexChange = index - (i + 2 + dataColumnStart)
+                                dataRow[dataIndexChange] = lastValid - (difference * (1 + i))  
+                            zeroCount = 0
                     dataRow.append(number)
+                
 
             if len(dataRow) == dataRowLength:
                 maxValue = max(dataRow) ## This value needs to be saved eventually.
