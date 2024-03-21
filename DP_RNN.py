@@ -1,8 +1,9 @@
 import keras
 import DP_GraphHelper
 
-
 SAVE_FORMAT = 'keras'
+MEAN_ABSOLUTE_ERROR = 'mae'
+MEAN_SQUARED_ERROR = 'mse'
 
 class DP_RNN():
     def __init__(self, modelLocation):
@@ -20,7 +21,7 @@ class DP_RNN():
             decay_steps=10000,
             decay_rate=0.9)
         self.__optimizer = keras.optimizers.Adam(learning_rate=self.__learningRate_schedule)
-        self.__cpi_rnn.compile(loss='mse', optimizer=self.__optimizer, metrics=[keras.metrics.MeanAbsolutePercentageError()])
+        self.__cpi_rnn.compile(loss=MEAN_ABSOLUTE_ERROR, optimizer=self.__optimizer, metrics=[keras.metrics.MeanAbsolutePercentageError()])
 
     def train(self, xTrain, yTrain, xValid, yValid, showHistory):
         history = self.__cpi_rnn.fit(xTrain, yTrain, epochs=self.__epochs, batch_size=20, validation_data=[xValid, yValid])

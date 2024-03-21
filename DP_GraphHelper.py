@@ -3,6 +3,9 @@ import matplotlib
 from matplotlib import pyplot
 
 FIRST = 0
+LINED_DATA_POINTS_BLUE = 'b.-'
+LINED_DATA_CROSSES_BLUE = 'bx-'
+LINED_DATA_CROSSES_RED = 'rx-'
 
 def PlotTrainingHistory(history):
     pyplot.plot(history.history['mean_absolute_percentage_error'])
@@ -13,34 +16,33 @@ def PlotTrainingHistory(history):
     pyplot.show()
 
 def PlotTestData(data):
-    f, axis = pyplot.subplots(4, 4, figsize=(15,8))
+    f, axis = pyplot.subplots(1, 2, figsize=(15,8))
     for idx, ax in enumerate(axis.flatten()):
-      ax.plot(data[idx], 'b.-')
+      ax.plot(data[idx], LINED_DATA_POINTS_BLUE)
       ax.grid(True)
     pyplot.show()
 
-def PlotPredictedData(current, expected, predicted):
+def PlotPredictedData(current, predicted, expected=[]):
+    if(len(expected) == 0):
+        predictionRange = numpy.arange(len(current[FIRST]),
+                                       len(current[FIRST]) + len(predicted[FIRST]))
+        expected = None
+        return __PlotPredictedData(current, expected, predicted, predictionRange)
+
     if (len(predicted[FIRST]) > 1):
-        return PlotMultiPredictedData(current, expected, predicted)
+        predictionRange = numpy.arange(len(current[FIRST]),
+                                       len(current[FIRST]) + len(predicted[FIRST]))
+        return __PlotPredictedData(current, expected, predicted, predictionRange)
     else:
-        return PlotSinglePredictedData(current, expected, predicted)
+        predictedIndex = len(current) + 1
+        return __PlotPredictedData(current, expected, predicted, predictedIndex)
 
-def PlotMultiPredictedData(current, expected, predicted):
-    predictionRange = numpy.arange(len(current[FIRST]),
-                                   len(current[FIRST]) + len(predicted[FIRST]))
-    f,axes = pyplot.subplots(4, 3,figsize=(15,8))
+def __PlotPredictedData(current, expected, predicted, predictionRange):
+    f,axes = pyplot.subplots(1, 2, figsize=(15,8))
     for idx, ax in enumerate(axes.flatten()):
-       ax.plot(current[idx], 'b.-')
-       ax.plot(predictionRange, predicted[idx], 'ro-')
-       ax.plot(predictionRange, expected[idx], 'bo-')
-       ax.grid(True)
-    pyplot.show()
-
-def PlotSinglePredictedData(current, expected, predicted):
-    f,axes = pyplot.subplots(4, 3,figsize=(15,8))
-    for idx, ax in enumerate(axes.flatten()):
-        ax.plot(current[idx], 'b.-')
-        ax.plot(53, predicted[idx], 'ro-')
-        ax.plot(53, expected[idx], 'bo-')
+        ax.plot(current[idx], LINED_DATA_POINTS_BLUE)
+        ax.plot(predictionRange, predicted[idx], LINED_DATA_CROSSES_RED)
+        if(len(expected)!=0):
+            ax.plot(predictionRange, expected[idx], LINED_DATA_CROSSES_BLUE)
         ax.grid(True)
-    pyplot.show()
+    pyplot.show()    
