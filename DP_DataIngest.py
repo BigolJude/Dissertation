@@ -11,22 +11,22 @@ QUOTE_MARKS = "\""
 EMPTY_STRING = ""
 
 def IngestCPIData(cpiInflationData):
-    cpiInflationDataRaw, cpiInflationData = __CleanData(cpiInflationData, CPI_ROW_LENGTH, CPI_COLUMN_START)
+    cpiInflationMetaData, cpiInflationData = __CleanData(cpiInflationData, CPI_ROW_LENGTH, CPI_COLUMN_START, labelIndex=2)
     cpiInflationData = __SplitDataByMonths(cpiInflationData)
     cpiInflationData = __FormatData(cpiInflationData)
-    cpiInflationDataRaw = __FormatData(cpiInflationDataRaw)
-    return cpiInflationDataRaw, cpiInflationData
+    return cpiInflationMetaData, cpiInflationData
 
 def IngestWageData(wageData):
-    wageDataRaw, wageData = __CleanData(wageData, WAGES_ROW_LENGTH, WAGES_COLUMN_START)
+    wageMetaData, wageData = __CleanData(wageData, WAGES_ROW_LENGTH, WAGES_COLUMN_START, labelIndex=FIRST)
     wageData = __FormatData(wageData)
-    wageDataRaw = __FormatData(wageDataRaw)
-    return wageDataRaw, wageData    
+    return wageMetaData, wageData    
 
-def __CleanData(data, dataRowLength, dataColumnStart):
+def __CleanData(data, dataRowLength, dataColumnStart, labelIndex):
     data = data[1:]
-    dataRaw = []
+    metaData = []
     dataNormalised = []
+
+    rowIndex = 0
 
     for row in data:
         if len(row) > 10:
@@ -43,10 +43,17 @@ def __CleanData(data, dataRowLength, dataColumnStart):
                 normalisedDataRow = __NormaliseDataRow(dataRow, maxValue)
 
                 if(any(normalisedDataRow)):
-                    dataRaw.append(dataRow)
+                    metaDataRow = []
+                    metaDataRow.append(row[labelIndex])
+                    metaDataRow.append(maxValue)
+                    metaDataRow.append(rowIndex)
+
+                    metaData.append(metaDataRow)
                     dataNormalised.append(normalisedDataRow)
 
-    return dataRaw, dataNormalised
+                    rowIndex = rowIndex + 1
+
+    return metaData, dataNormalised
 
 def __SplitDataByMonths(cpiInflationDataNormalised):
     yearsInData = round(len(cpiInflationDataNormalised[FIRST]) / MONTHS, 0)
