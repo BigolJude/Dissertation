@@ -12,7 +12,7 @@ EMPTY_STRING = ""
 
 def IngestCPIData(cpiInflationData):
     cpiInflationMetaData, cpiInflationData = __CleanData(cpiInflationData, CPI_ROW_LENGTH, CPI_COLUMN_START, labelIndex=2)
-    cpiInflationData = __SplitDataByMonths(cpiInflationData)
+    cpiInflationMetaData, cpiInflationData = __SplitDataByMonths(cpiInflationData, cpiInflationMetaData)
     cpiInflationData = __FormatData(cpiInflationData)
     return cpiInflationMetaData, cpiInflationData
 
@@ -69,18 +69,22 @@ def __CleanData(data, dataRowLength, dataColumnStart, labelIndex):
 
     return metaData, dataNormalised
 
-def __SplitDataByMonths(cpiInflationDataNormalised):
+def __SplitDataByMonths(cpiInflationDataNormalised, cpiInflationMetaData):
     yearsInData = round(len(cpiInflationDataNormalised[FIRST]) / MONTHS, 0)
     yearsInData = int(yearsInData) - 1
-
     splitDataRows = []
-    for dataRow in cpiInflationDataNormalised:
+    splitMetaData = []
+
+    for index, dataRow in enumerate(cpiInflationDataNormalised):
         for month in range(MONTHS):
+            splitMetaData.append(cpiInflationMetaData[index])
             splitDataRow = []
+
             for year in range(yearsInData):
                 splitDataRow.append(dataRow[(year * MONTHS) + month])
+
             splitDataRows.append(splitDataRow)
-    return splitDataRows
+    return splitMetaData, splitDataRows
 
 def __FormatData(dataRows):
 

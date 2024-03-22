@@ -4,6 +4,7 @@
 # - add in some form of hill climbing
 # - test the model with a full dataset.
 # - code clean up.
+# - do some arethmatic to caculate the indexes of countries within the split dataset.
 
 import sys
 import os
@@ -25,6 +26,14 @@ TIME_COLUMN = 'time'
 CPI_COLUMN = 'CPI'
 COUNTRY_LITHUANIA = 'Lithuania'
 
+def RescaleDataRow(dataRow, maxValue):
+    scaledDataRow = []
+
+    for dataPoint in dataRow:
+        scaledDataRow.append(dataPoint * maxValue)
+    return scaledDataRow
+
+
 cpiInflationData = ReadCSV('Inflation-data - hcpi_m.csv')
 wagesPerCountry = ReadCSV('WagesPerCountry_WorldBank.csv')
 
@@ -32,15 +41,24 @@ cpiInflationMetaData, cpiInflationDataSplit = IngestCPIData(cpiInflationData)
 wageMetaData, wageDataClean = IngestWageData(wagesPerCountry)
 
 lithuanianWageData = []
-lithuanianMetaData = []
+lithuanianWageMetaData = []
+lithuanianCPIData = []
+lithuanianCPIMetaData = []
 
-for country in wageMetaData:
+for index, country in enumerate(wageMetaData):
     countryName = country[FIRST].replace("\"","")
     if(countryName == COUNTRY_LITHUANIA):
-        lithuanianWageData = wageDataClean[country[2]]
-        lithuanianMetaData = country
+        lithuanianWageData = wageDataClean[index]
+        lithuanianWageMetaData = country
+
+for index, country in enumerate(cpiInflationMetaData):
+    countryName = country[FIRST]
+    if(countryName == COUNTRY_LITHUANIA):
+        lithuanianCPIData = cpiInflationDataSplit[index]
+        lithuanianCPIMetaData = country
 
 lithuanianWageData = numpy.array([lithuanianWageData])
+lithuanianCPIData = numpy.array([lithuanianCPIData])
 
 xTrain_CPI, yTrain_CPI = cpiInflationDataSplit[:1900, :48], cpiInflationDataSplit[:1900, -5:]
 xValid_CPI, yValid_CPI = cpiInflationDataSplit[1900:2000, :48], cpiInflationDataSplit[1900:2000, -5:]
@@ -53,8 +71,8 @@ xTest_Wages, yTest_Wages = wageDataClean[210:, :59], wageDataClean[210:, -5:]
 DP_GraphHelper.PlotTestData(xTrain_CPI)
 DP_GraphHelper.PlotTestData(xTrain_Wages)
 
-cpi_rnn = DP_RNN(initialLayerNeurons=100, epochs=15)
-wage_rnn = DP_RNN(initialLayerNeurons=200, epochs=30)
+cpi_rnn = DP_RNN(initialLayerNeurons=50, epochs=1)
+wage_rnn = DP_RNN(initialLayerNeurons=50, epochs=1)
 
 wage_rnn.train(xTrain_Wages, yTrain_Wages, xValid_Wages, yValid_Wages, True)
 cpi_rnn.train(xTrain_CPI, yTrain_CPI, xValid_CPI, yValid_CPI, True)
@@ -65,17 +83,14 @@ wages_prediction = wage_rnn.GetModel().predict(xTest_Wages)
 DP_GraphHelper.PlotPredictedData(xTest_CPI, cpi_prediction, yTest_CPI,)
 DP_GraphHelper.PlotPredictedData(xTest_Wages, wages_prediction, yTest_Wages)
 
-lithuanian_prediction = wage_rnn.GetModel().predict([lithuanianWageData])
+lithuanian_wage_prediction = wage_rnn.GetModel().predict([lithuanianWageData])
+lithuanian_CPI_prediction = cpi_rnn.GetModel().predict([lithuanianCPIData])
 
-lithuanian_wages = []
+lithuanian_wages = RescaleDataRow(lithuanianWageData, lithuanianWageMetaData[1])
+lithuanian_wage_predictions = RescaleDataRow(lithuanian_wage_prediction, lithuanianWageMetaData[1])
+lithuanian_cpi = RescaleDataRow(lithuanianCPIData, lithuanianCPIMetaData[1])
+lithuanian_cpi_predictions = RescaleDataRow(lithuanian_CPI_prediction, lithuanianCPIMetaData[1])
 
-for wageDataPoint in lithuanianWageData:
-    lithuanian_wages.append(wageDataPoint * lithuanianMetaData[1])
-
-lithuanian_wage_predictions = []
-
-for wageDataPrediction in lithuanian_prediction[FIRST]:
-    lithuanian_wage_predictions.append(wageDataPrediction * lithuanianMetaData[1])
-
-DP_GraphHelper.PlotPredictedData(lithuanian_wages, [lithuanian_wage_predictions])
+DP_GraphHelper.PlotPredictedData(lithuanian_wages, lithuanian_wage_predictions)
+DP_GraphHelper.PlotPredictedData(lithuanian_cpi, lithuanian_cpi_predictions)
 print('done')
