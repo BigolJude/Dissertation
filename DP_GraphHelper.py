@@ -15,10 +15,16 @@ def PlotTrainingHistory(history):
     pyplot.ylabel('accuracy')
     pyplot.show()
 
-def PlotTestData(data):
+def PlotData(*args):
+        for arg in args:
+            pyplot.plot(arg, LINED_DATA_POINTS_BLUE)
+        pyplot.show()
+
+def PlotTestData(*args):
     f, axis = pyplot.subplots(4, 4, figsize=(15,8))
     for idx, ax in enumerate(axis.flatten()):
-      ax.plot(data[idx], LINED_DATA_POINTS_BLUE)
+      for arg in args:
+        ax.plot(arg[idx], LINED_DATA_POINTS_BLUE)
       ax.grid(True)
     pyplot.show()
 
