@@ -6,13 +6,18 @@ FIRST = 0
 LINED_DATA_POINTS_BLUE = 'b.-'
 LINED_DATA_CROSSES_BLUE = 'bx-'
 LINED_DATA_CROSSES_RED = 'rx-'
+MEAN_ABSOLUTE_ERROR = 'mean_absolute_percentage_error'
+MEAN_ABSOLUTE_ERROR_VALUE = 'val_' + MEAN_ABSOLUTE_ERROR
+LOSS = 'loss'
+EPOCHS = 'epochs'
+ACCURACY = 'accuracy'
 
 def PlotTrainingHistory(history):
-    pyplot.plot(history.history['mean_absolute_percentage_error'])
-    pyplot.plot(history.history['val_mean_absolute_percentage_error'])
-    pyplot.plot(history.history['loss'])
-    pyplot.xlabel('epochs')
-    pyplot.ylabel('accuracy')
+    pyplot.plot(history.history[MEAN_ABSOLUTE_ERROR])
+    pyplot.plot(history.history[MEAN_ABSOLUTE_ERROR_VALUE])
+    pyplot.plot(history.history[LOSS])
+    pyplot.xlabel(EPOCHS)
+    pyplot.ylabel(ACCURACY)
     pyplot.show()
 
 def PlotData(*args):

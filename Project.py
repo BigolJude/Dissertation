@@ -21,16 +21,16 @@ from DP_CSV import *
 
 # Const ints
 FIRST = 0
-AVERAGE_COL_LITHUANIA = 846.9
-AVERAGE_RENTAL_LITHUANIA = 1000
-AVERAGE_OCOL_LITHUANIA = AVERAGE_RENTAL_LITHUANIA + AVERAGE_COL_LITHUANIA
+AVERAGE_COL = 846.9
+AVERAGE_RENTAL = 1000
+AVERAGE_OCOL_COUNTRY = AVERAGE_RENTAL + AVERAGE_COL
 
 # Const strings
 COMMA_SEPARATOR = ','
 VERTICAL_ROTATION = 'vertical'
 TIME_COLUMN = 'time'
 CPI_COLUMN = 'CPI'
-COUNTRY_LITHUANIA = 'United Kingdom'
+COUNTRY = 'United Kingdom'
 
 # File Paths
 MODEL_LOCATION = 'generated_models/'
@@ -99,8 +99,8 @@ wageMetaData, wageDataClean = IngestWageData(wagesPerCountry)
 cpi_rnn = None
 wage_rnn = None
 
-lithuanianWageData, lithuanianWageMetaData = GetCountryWageData(COUNTRY_LITHUANIA, wageMetaData, wageDataClean)
-lithuanianCPIData, lithuanianCPIMetaData = GetCountryCPIData(COUNTRY_LITHUANIA, cpiInflationMetaData, cpiInflationDataSplit)
+countryWageData, lithuanianWageMetaData = GetCountryWageData(COUNTRY, wageMetaData, wageDataClean)
+countryCPIData, countryCPIMetaData = GetCountryCPIData(COUNTRY, cpiInflationMetaData, cpiInflationDataSplit)
 
 while((wage_rnn == None) | (cpi_rnn == None)):
     try:
@@ -121,25 +121,27 @@ wages_prediction = wage_rnn.GetModel().predict(xTest_Wages)
 DP_GraphHelper.PlotPredictedData(xTest_CPI, cpi_prediction, yTest_CPI)
 DP_GraphHelper.PlotPredictedData(xTest_Wages, cpi_prediction, yTest_Wages)
 
-cpi_prediction = cpi_rnn.GetModel().predict(lithuanianCPIData)
-wages_prediction = wage_rnn.GetModel().predict(lithuanianWageData)
+cpi_prediction = cpi_rnn.GetModel().predict(countryCPIData)
+wages_prediction = wage_rnn.GetModel().predict(countryWageData)
 
 lithaunianMaxWages = 0
 
 for metaData in wageMetaData:
     country = metaData[FIRST].replace(QUOTE_MARKS, EMPTY_STRING)
-    if country == COUNTRY_LITHUANIA:
-        lithuanianMaxWages = metaData[1]
+    if country == COUNTRY:
+        countryMaxWages = metaData[1]
 
 
-lithuanianCPIData = RescaleDataRow(lithuanianCPIData[FIRST], lithuanianCPIMetaData[FIRST][1])
+countryCPIData = RescaleDataRow(countryCPIData[FIRST], countryCPIMetaData[FIRST][1])
 
-val = lithuanianCPIData[FIRST][len(lithuanianCPIData[FIRST]) - 1]
+val = countryCPIData[FIRST][len(countryCPIData[FIRST]) - 1]
 
-lithuanianCPIData = [x / val for x in lithuanianCPIData]
-lithuanianCPIData = RescaleDataRow(lithuanianCPIData, AVERAGE_OCOL_LITHUANIA * 12)
-lithuanianWageData = RescaleDataRow(lithuanianWageData[FIRST], lithuanianMaxWages); 
+countryCPIData = [x / val for x in countryCPIData]
+countryCPIData = RescaleDataRow(countryCPIData, AVERAGE_OCOL_COUNTRY * 12)
+countryWageData = RescaleDataRow(countryWageData[FIRST], countryMaxWages); 
 
-DP_GraphHelper.PlotData(lithuanianWageData[FIRST][10:], lithuanianCPIData[FIRST])
+DP_GraphHelper.PlotData(countryWageData[FIRST][10:], countryCPIData[FIRST])
+
+
 
 print('done')
