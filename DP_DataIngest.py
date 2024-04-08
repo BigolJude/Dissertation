@@ -14,11 +14,13 @@ def IngestCPIData(cpiInflationData):
     cpiInflationMetaData, cpiInflationData = __CleanData(cpiInflationData, CPI_ROW_LENGTH, CPI_COLUMN_START, labelIndex=2)
     cpiInflationData = __SplitDataByMonths(cpiInflationData, cpiInflationMetaData)
     cpiInflationData = __FormatData(cpiInflationData)
+    cpiInflationMetaData = __CleanDoubleStrings(cpiInflationMetaData)
     return cpiInflationMetaData, cpiInflationData
 
 def IngestWageData(wageData):
     wageMetaData, wageData = __CleanData(wageData, WAGES_ROW_LENGTH, WAGES_COLUMN_START, labelIndex=FIRST)
     wageData = __FormatData(wageData)
+    wageMetaData = __CleanDoubleStrings(wageMetaData)
     return wageMetaData, wageData    
 
 def __CleanData(data, dataRowLength, dataColumnStart, labelIndex):
@@ -107,3 +109,16 @@ def __NormaliseDataRow(dataRow, maxValue):
             value = (value / maxValue)
         normalisedDataRow.append(value)
     return normalisedDataRow
+
+def __CleanDoubleStrings(dataSet):
+    cleanedDataSet = []
+
+    for dataRow in dataSet:
+        cleanedDataRow = []
+        for i in range(len(dataRow)):
+            if(isinstance(dataRow[i], str)):
+                cleanedDataRow.append(dataRow[i].replace(QUOTE_MARKS, EMPTY_STRING))
+            else:
+                cleanedDataRow.append(dataRow[i])
+        cleanedDataSet.append(cleanedDataRow)
+    return cleanedDataSet

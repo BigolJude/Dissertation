@@ -4,7 +4,6 @@
 # - test the model with a full dataset.
 # - code clean up.
 # - do some arethmatic to caculate the indexes of countries within the split dataset.
-# - data still needs to be destringerfied on Countries.
 
 import sys
 import os
@@ -21,8 +20,8 @@ from DP_CSV import *
 
 # Const ints
 FIRST = 0
-AVERAGE_COL = 846.9
-AVERAGE_RENTAL = 1000
+AVERAGE_COL = 805.24
+AVERAGE_RENTAL = 542.61
 AVERAGE_OCOL_COUNTRY = AVERAGE_RENTAL + AVERAGE_COL
 
 # Const strings
@@ -30,8 +29,9 @@ COMMA_SEPARATOR = ','
 VERTICAL_ROTATION = 'vertical'
 TIME_COLUMN = 'time'
 CPI_COLUMN = 'CPI'
-COUNTRY = 'United Kingdom'
-
+COUNTRY = 'Cuba'
+WAGE_DATASET = 'wage'
+CPI_DATASET = 'cpi'
 # File Paths
 MODEL_LOCATION = 'generated_models/'
 DATASET_LOCATION = 'datasets/'
@@ -42,29 +42,36 @@ WAGE_MODEL_LOCATION = MODEL_LOCATION + 'wage_model.keras'
 WAGE_DATASET_LOCATION = DATASET_LOCATION + 'WagesPerCountry_WorldBank.csv' 
 
 def TrainModels(cpiInflationDataSplit, wageDataClean):
-
     xTrain_CPI, yTrain_CPI = cpiInflationDataSplit[:1900, :48], cpiInflationDataSplit[:1900, -5:]
     xValid_CPI, yValid_CPI = cpiInflationDataSplit[1900:2000, :48], cpiInflationDataSplit[1900:2000, -5:]
 
     xTrain_Wages, yTrain_Wages = wageDataClean[1:200,:59], wageDataClean[1:200, -5:]
     xValid_Wages, yValid_Wages = wageDataClean[200:220,:59], wageDataClean[200:220, -5:]
 
-    cpi_rnn = DP_RNN(initialLayerNeurons=150, epochs=50)
-    wage_rnn = DP_RNN(initialLayerNeurons=200, epochs=100)
+    simpleCpiRnn = DP_RNN(150, 50, 'Simple')
+    simpleWageRnn = DP_RNN(200, 100, 'Simple')
 
-    wage_rnn.train(xTrain_Wages, yTrain_Wages, xValid_Wages, yValid_Wages, True)
-    cpi_rnn.train(xTrain_CPI, yTrain_CPI, xValid_CPI, yValid_CPI, True)
+    lstmCpiRnn = DP_RNN(150, 50, 'LSTM')
+    lstmWageRnn = DP_RNN(200, 100, 'LSTM')
+
+    gruCpiRnn = DP_RNN(150, 50, 'GRU')
+    gruWageRnn = DP_RNN(200, 100, 'GRU')
+
+    simpleCPIHistory = simpleWageRnn.train(xTrain_Wages, yTrain_Wages, xValid_Wages, yValid_Wages, True, WAGE_DATASET)
+    simpleWageHistory = simpleCpiRnn.train(xTrain_CPI, yTrain_CPI, xValid_CPI, yValid_CPI, True, CPI_DATASET)
+
+    lstmCPIHistory = lstmWageRnn.train(xTrain_Wages, yTrain_Wages, xValid_Wages, yValid_Wages, True, WAGE_DATASET)
+    lstmWageHistory = lstmCpiRnn.train(xTrain_CPI, yTrain_CPI, xValid_CPI, yValid_CPI, True, CPI_DATASET)
+
+    gruCPIHistory = gruWageRnn.train(xTrain_Wages, yTrain_Wages, xValid_Wages, yValid_Wages, True, WAGE_DATASET)
+    gruWageHistory = gruCpiRnn.train(xTrain_CPI, yTrain_CPI, xValid_CPI, yValid_CPI, True, CPI_DATASET)
 
     cpi_rnn.SaveModel(CPI_MODEL_LOCATION)
     wage_rnn.SaveModel(WAGE_MODEL_LOCATION)
     return cpi_rnn, wage_rnn
 
 def RescaleDataRow(dataRow, maxValue):
-    scaledDataRow = []
-
-    for dataPoint in dataRow:
-        scaledDataRow.append(dataPoint * maxValue)
-    return scaledDataRow
+    return [x * maxValue for x in dataRow]
 
 def GetCountryWageData(country, wageMetaData, wageData):
     wageDataRow = []
@@ -99,8 +106,7 @@ wageMetaData, wageDataClean = IngestWageData(wagesPerCountry)
 cpi_rnn = None
 wage_rnn = None
 
-countryWageData, lithuanianWageMetaData = GetCountryWageData(COUNTRY, wageMetaData, wageDataClean)
-countryCPIData, countryCPIMetaData = GetCountryCPIData(COUNTRY, cpiInflationMetaData, cpiInflationDataSplit)
+print("datasets loaded.")
 
 while((wage_rnn == None) | (cpi_rnn == None)):
     try:
@@ -121,16 +127,16 @@ wages_prediction = wage_rnn.GetModel().predict(xTest_Wages)
 DP_GraphHelper.PlotPredictedData(xTest_CPI, cpi_prediction, yTest_CPI)
 DP_GraphHelper.PlotPredictedData(xTest_Wages, cpi_prediction, yTest_Wages)
 
-cpi_prediction = cpi_rnn.GetModel().predict(countryCPIData)
-wages_prediction = wage_rnn.GetModel().predict(countryWageData)
+countryWageData, countryWageMetaData = GetCountryWageData(COUNTRY, wageMetaData, wageDataClean)
+countryCPIData, countryCPIMetaData = GetCountryCPIData(COUNTRY, cpiInflationMetaData, cpiInflationDataSplit)
+
+countryCPI = numpy.array(countryCPIData[FIRST])
+countryWages = numpy.array(countryWageData[FIRST])
+
+cpi_prediction = cpi_rnn.GetModel().predict(countryCPI)
+wages_prediction = wage_rnn.GetModel().predict(countryWages)
 
 lithaunianMaxWages = 0
-
-for metaData in wageMetaData:
-    country = metaData[FIRST].replace(QUOTE_MARKS, EMPTY_STRING)
-    if country == COUNTRY:
-        countryMaxWages = metaData[1]
-
 
 countryCPIData = RescaleDataRow(countryCPIData[FIRST], countryCPIMetaData[FIRST][1])
 
@@ -138,10 +144,13 @@ val = countryCPIData[FIRST][len(countryCPIData[FIRST]) - 1]
 
 countryCPIData = [x / val for x in countryCPIData]
 countryCPIData = RescaleDataRow(countryCPIData, AVERAGE_OCOL_COUNTRY * 12)
-countryWageData = RescaleDataRow(countryWageData[FIRST], countryMaxWages); 
+countryWageData = RescaleDataRow(countryWageData[FIRST], countryWageMetaData[1])
 
-DP_GraphHelper.PlotData(countryWageData[FIRST][10:], countryCPIData[FIRST])
+cpi_prediction = RescaleDataRow(cpi_prediction, countryCPIMetaData[FIRST][1])
+cpi_prediction = [x / val for x in cpi_prediction]
+cpi_prediction = RescaleDataRow(cpi_prediction[FIRST], AVERAGE_OCOL_COUNTRY * 12)
+wages_prediction = RescaleDataRow(wages_prediction[FIRST], countryWageMetaData[1])
 
-
+DP_GraphHelper.PlotCountryPrediction(countryWageData[FIRST][10:], wages_prediction, countryCPIData[FIRST], cpi_prediction)
 
 print('done')
