@@ -20,8 +20,8 @@ from DP_CSV import *
 
 # Const ints
 FIRST = 0
-AVERAGE_COL = 805.24
-AVERAGE_RENTAL = 542.61
+AVERAGE_COL = 1000
+AVERAGE_RENTAL = 1000
 AVERAGE_OCOL_COUNTRY = AVERAGE_RENTAL + AVERAGE_COL
 
 # Const strings
@@ -29,7 +29,7 @@ COMMA_SEPARATOR = ','
 VERTICAL_ROTATION = 'vertical'
 TIME_COLUMN = 'time'
 CPI_COLUMN = 'CPI'
-COUNTRY = 'Cuba'
+COUNTRY = 'United Kingdom'
 WAGE_DATASET = 'wage'
 CPI_DATASET = 'cpi'
 # File Paths
@@ -66,9 +66,34 @@ def TrainModels(cpiInflationDataSplit, wageDataClean):
     gruCPIHistory = gruWageRnn.train(xTrain_Wages, yTrain_Wages, xValid_Wages, yValid_Wages, True, WAGE_DATASET)
     gruWageHistory = gruCpiRnn.train(xTrain_CPI, yTrain_CPI, xValid_CPI, yValid_CPI, True, CPI_DATASET)
 
-    cpi_rnn.SaveModel(CPI_MODEL_LOCATION)
-    wage_rnn.SaveModel(WAGE_MODEL_LOCATION)
-    return cpi_rnn, wage_rnn
+    cpiPercentageErrors = [simpleCPIHistory.history['mean_absolute_percentage_error'], 
+                        lstmCPIHistory.history['mean_absolute_percentage_error'], 
+                        gruCPIHistory.history['mean_absolute_percentage_error']]
+    
+    wagePercentageErrors = [simpleWageHistory.history['mean_absolute_percentage_error'],
+                            lstmWageHistory.history['mean_absolute_percentage_error'],
+                            gruWageHistory.history['mean_absolute_percentage_error']]
+
+    cpiModels = [simpleCpiRnn, lstmCpiRnn, gruCpiRnn]
+    wageModels = [simpleWageRnn, lstmWageRnn, gruWageRnn]
+    
+
+    cpiRnn = GetBestModel(cpiPercentageErrors, cpiModels)
+    wageRnn = GetBestModel(wagePercentageErrors, wageModels) 
+
+    cpiRnn.SaveModel(CPI_MODEL_LOCATION)
+    wageRnn.SaveModel(WAGE_MODEL_LOCATION)
+    return cpiRnn, wage_rnn
+
+def GetBestModel(percentageErrors, models):
+    minError = 100
+    minIndex = 0
+
+    for index, cpiPercentageError in enumerate(percentageErrors):
+        if minError > min(cpiPercentageError):
+            minIndex = index
+
+    return models[minIndex]
 
 def RescaleDataRow(dataRow, maxValue):
     return [x * maxValue for x in dataRow]
