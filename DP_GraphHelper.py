@@ -15,13 +15,13 @@ ERROR = 'error'
 GRAPH_SAVE_LOCATION = 'generated_graphs/'
 
 
-def PlotTrainingHistory(history, dataset, rnn_type):
+def PlotTrainingHistory(history, dataset, rnn_details):
     pyplot.plot(history.history[MEAN_ABSOLUTE_ERROR])
     pyplot.plot(history.history[MEAN_ABSOLUTE_ERROR_VALUE])
     pyplot.plot(history.history[LOSS])
     pyplot.xlabel(EPOCHS)
     pyplot.ylabel(ERROR)
-    __SaveAndClearPlot(GRAPH_SAVE_LOCATION + 'TrainingHistory_' + rnn_type + '_' + dataset +'.jpg')
+    __SaveAndClearPlot(GRAPH_SAVE_LOCATION + 'TrainingHistory_' + rnn_details + '_' + dataset +'.jpg')
 
 def PlotData(*args):
         for arg in args:

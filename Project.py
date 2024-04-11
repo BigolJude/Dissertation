@@ -32,6 +32,11 @@ CPI_COLUMN = 'CPI'
 COUNTRY = 'United Kingdom'
 WAGE_DATASET = 'wage'
 CPI_DATASET = 'cpi'
+SIMPLE_RNN = 'Simple'
+LSTM_RNN = 'LSTM'
+GRU_RNN = 'GRU'
+APPEND = 'a'
+
 # File Paths
 MODEL_LOCATION = 'generated_models/'
 DATASET_LOCATION = 'datasets/'
@@ -48,35 +53,32 @@ def TrainModels(cpiInflationDataSplit, wageDataClean):
     xTrain_Wages, yTrain_Wages = wageDataClean[1:200,:59], wageDataClean[1:200, -5:]
     xValid_Wages, yValid_Wages = wageDataClean[200:220,:59], wageDataClean[200:220, -5:]
 
-    simpleCpiRnn = DP_RNN(150, 50, 'Simple')
-    simpleWageRnn = DP_RNN(200, 100, 'Simple')
+    cpiModels = GenerateModels(200, 100)
+    cpiPercentageErrors = []
 
-    lstmCpiRnn = DP_RNN(150, 50, 'LSTM')
-    lstmWageRnn = DP_RNN(200, 100, 'LSTM')
+    for index, model in enumerate(cpiModels):
+        history = model.train(xTrain_CPI, yTrain_CPI, xValid_CPI, yValid_CPI, True, CPI_DATASET)
+        errorRate = history.history['mean_absolute_percentage_error']
 
-    gruCpiRnn = DP_RNN(150, 50, 'GRU')
-    gruWageRnn = DP_RNN(200, 100, 'GRU')
+        cpiPercentageErrors.append(errorRate)
+        cpiTrainingHistoryFile = open("CPI_Models_TrainingHistory.txt", APPEND)
+        cpiTrainingHistoryFile.write(CPI_DATASET + '_' + model.GetModelDescription() + ', ' + str(errorRate[len(errorRate) - 1]) + '\n')
+        cpiTrainingHistoryFile.close()
+        print(str(index + 1) +' out of' + str(len(cpiModels)) + 'trained')
 
-    simpleCPIHistory = simpleWageRnn.train(xTrain_Wages, yTrain_Wages, xValid_Wages, yValid_Wages, True, WAGE_DATASET)
-    simpleWageHistory = simpleCpiRnn.train(xTrain_CPI, yTrain_CPI, xValid_CPI, yValid_CPI, True, CPI_DATASET)
+    wageModels = GenerateModels(200, 100)
+    wagePercentageErrors = []
 
-    lstmCPIHistory = lstmWageRnn.train(xTrain_Wages, yTrain_Wages, xValid_Wages, yValid_Wages, True, WAGE_DATASET)
-    lstmWageHistory = lstmCpiRnn.train(xTrain_CPI, yTrain_CPI, xValid_CPI, yValid_CPI, True, CPI_DATASET)
+    for index, model in enumerate(wageModels):
+        history = model.train(xTrain_Wages, yTrain_Wages, xValid_Wages, yValid_Wages, True, WAGE_DATASET)
 
-    gruCPIHistory = gruWageRnn.train(xTrain_Wages, yTrain_Wages, xValid_Wages, yValid_Wages, True, WAGE_DATASET)
-    gruWageHistory = gruCpiRnn.train(xTrain_CPI, yTrain_CPI, xValid_CPI, yValid_CPI, True, CPI_DATASET)
+        errorRate = history.history['mean_absolute_percentage_error']
+        wagePercentageErrors.append(errorRate)
+        wageTrainingHistoryFile = open("Wage_Models_TrainingHistory.txt", APPEND)
+        wageTrainingHistoryFile.write(CPI_DATASET + '_' + model.GetModelDescription() + ', ' + str(errorRate[len(errorRate) - 1]) + '\n')
+        wageTrainingHistoryFile.close()
+        print(str(index + 1) +' out of' + str(len(wageModels)) + 'trained')
 
-    cpiPercentageErrors = [simpleCPIHistory.history['mean_absolute_percentage_error'], 
-                        lstmCPIHistory.history['mean_absolute_percentage_error'], 
-                        gruCPIHistory.history['mean_absolute_percentage_error']]
-    
-    wagePercentageErrors = [simpleWageHistory.history['mean_absolute_percentage_error'],
-                            lstmWageHistory.history['mean_absolute_percentage_error'],
-                            gruWageHistory.history['mean_absolute_percentage_error']]
-
-    cpiModels = [simpleCpiRnn, lstmCpiRnn, gruCpiRnn]
-    wageModels = [simpleWageRnn, lstmWageRnn, gruWageRnn]
-    
 
     cpiRnn = GetBestModel(cpiPercentageErrors, cpiModels)
     wageRnn = GetBestModel(wagePercentageErrors, wageModels) 
@@ -85,13 +87,34 @@ def TrainModels(cpiInflationDataSplit, wageDataClean):
     wageRnn.SaveModel(WAGE_MODEL_LOCATION)
     return cpiRnn, wage_rnn
 
+def GenerateModels(maxNeurons, maxEpochs):
+    models = []
+    
+    modelsExpected = (maxNeurons / 50) * (maxEpochs / 10) * 3
+
+    modelsGenerated = 0
+    for neurons in range(50, maxNeurons + 1, 50):
+        for epochs in range(10, maxEpochs + 1, 10):
+            for type in range(3):
+                if type == 0:
+                    models.append(DP_RNN(neurons, epochs, SIMPLE_RNN))
+                elif type == 1:
+                    models.append(DP_RNN(neurons, epochs, LSTM_RNN))
+                elif type == 2:
+                    models.append(DP_RNN(neurons, epochs, GRU_RNN))
+                modelsGenerated += 1
+                print( str(modelsGenerated) + ' out of ' + str(modelsExpected) + ' generated.')
+    return models
+
+
 def GetBestModel(percentageErrors, models):
     minError = 100
     minIndex = 0
 
     for index, cpiPercentageError in enumerate(percentageErrors):
-        if minError > min(cpiPercentageError):
+        if minError > cpiPercentageError[len(cpiPercentageError) - 1]:
             minIndex = index
+            minError = cpiPercentageError[len(cpiPercentageError) - 1]
 
     return models[minIndex]
 

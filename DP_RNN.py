@@ -13,28 +13,28 @@ DENSE_LAYER_ACTIVATION = 'relu'
 class DP_RNN():
     def __init__(self, *args):
         if len(args) == 3:
-            initialLayerNeurons = args[0] 
+            self.__initialLayerNeurons = args[0] 
             self.__epochs = args[1]
             self.__type = args[2]
             rnnLayers = 0
             if(args[2] == GRU_SETTING):
                 rnnLayers = [
-                    keras.layers.GRU(initialLayerNeurons, input_shape=(None, 1), return_sequences=True),
-                    keras.layers.GRU(int(round(initialLayerNeurons / 2, 0)), return_sequences=True),
-                    keras.layers.GRU(int(round(initialLayerNeurons / 4, 0)))]
+                    keras.layers.GRU(self.__initialLayerNeurons, input_shape=(None, 1), return_sequences=True),
+                    keras.layers.GRU(int(round(self.__initialLayerNeurons / 2, 0)), return_sequences=True),
+                    keras.layers.GRU(int(round(self.__initialLayerNeurons / 4, 0)))]
             if(args[2] == LSTM_SETTING):
                 rnnLayers = [
-                    keras.layers.LSTM(initialLayerNeurons, input_shape=(None, 1), return_sequences=True),
-                    keras.layers.LSTM(int(round(initialLayerNeurons / 2, 0)), return_sequences=True),
-                    keras.layers.LSTM(int(round(initialLayerNeurons / 4, 0)))]
+                    keras.layers.LSTM(self.__initialLayerNeurons, input_shape=(None, 1), return_sequences=True),
+                    keras.layers.LSTM(int(round(self.__initialLayerNeurons / 2, 0)), return_sequences=True),
+                    keras.layers.LSTM(int(round(self.__initialLayerNeurons / 4, 0)))]
             if(args[2] == SIMPLE_RNN_SETTING):
                 rnnLayers = [
-                    keras.layers.SimpleRNN(initialLayerNeurons, input_shape=(None, 1), return_sequences=True),
-                    keras.layers.SimpleRNN(int(round(initialLayerNeurons / 2, 0)), return_sequences=True),
-                    keras.layers.SimpleRNN(int(round(initialLayerNeurons / 4, 0)))]
-            rnnLayers.append(keras.layers.Dense(initialLayerNeurons, activation=DENSE_LAYER_ACTIVATION))
-            rnnLayers.append(keras.layers.Dense(int(round(initialLayerNeurons / 2, 0)), activation=DENSE_LAYER_ACTIVATION))
-            rnnLayers.append(keras.layers.Dense(int(round(initialLayerNeurons / 4, 0)), activation=DENSE_LAYER_ACTIVATION))
+                    keras.layers.SimpleRNN(self.__initialLayerNeurons, input_shape=(None, 1), return_sequences=True),
+                    keras.layers.SimpleRNN(int(round(self.__initialLayerNeurons / 2, 0)), return_sequences=True),
+                    keras.layers.SimpleRNN(int(round(self.__initialLayerNeurons / 4, 0)))]
+            rnnLayers.append(keras.layers.Dense(self.__initialLayerNeurons, activation=DENSE_LAYER_ACTIVATION))
+            rnnLayers.append(keras.layers.Dense(int(round(self.__initialLayerNeurons / 2, 0)), activation=DENSE_LAYER_ACTIVATION))
+            rnnLayers.append(keras.layers.Dense(int(round(self.__initialLayerNeurons / 4, 0)), activation=DENSE_LAYER_ACTIVATION))
             rnnLayers.append(keras.layers.Dense(5))
             self.__rnn = keras.models.Sequential(rnnLayers)
             self.__learningRate_schedule = keras.optimizers.schedules.ExponentialDecay(
@@ -50,7 +50,7 @@ class DP_RNN():
     def train(self, xTrain, yTrain, xValid, yValid, showHistory, dataset):
         history = self.__rnn.fit(xTrain, yTrain, epochs=self.__epochs , validation_data=[xValid, yValid])
         if(showHistory):
-            DP_GraphHelper.PlotTrainingHistory(history, dataset, self.__type)
+            DP_GraphHelper.PlotTrainingHistory(history, dataset, self.GetModelDescription())
         return history
 
     def GetModel(self):
@@ -61,3 +61,6 @@ class DP_RNN():
     
     def __LoadModel(self, fileLocation):
         self.__rnn = keras.models.load_model(fileLocation)
+
+    def GetModelDescription(self):
+        return str(self.__type)+ '_' + str(self.__epochs) + '_' + str(self.__initialLayerNeurons)
