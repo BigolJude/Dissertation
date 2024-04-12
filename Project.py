@@ -90,11 +90,11 @@ def TrainModels(cpiInflationDataSplit, wageDataClean):
 def GenerateModels(maxNeurons, maxEpochs):
     models = []
     
-    modelsExpected = (maxNeurons / 50) * (maxEpochs / 10) * 3
+    modelsExpected = (maxNeurons / 50) * (maxEpochs / 20) * 3
 
     modelsGenerated = 0
     for neurons in range(50, maxNeurons + 1, 50):
-        for epochs in range(10, maxEpochs + 1, 10):
+        for epochs in range(20, maxEpochs + 1, 20):
             for type in range(3):
                 if type == 0:
                     models.append(DP_RNN(neurons, epochs, SIMPLE_RNN))
