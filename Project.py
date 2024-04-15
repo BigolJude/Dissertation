@@ -44,7 +44,8 @@ DATASET_LOCATION = 'datasets/'
 CPI_DATASET_LOCATION = DATASET_LOCATION + 'Inflation-data - hcpi_m.csv'
 CPI_MODEL_LOCATION = MODEL_LOCATION + 'cpi_model.keras'
 WAGE_MODEL_LOCATION = MODEL_LOCATION + 'wage_model.keras'
-WAGE_DATASET_LOCATION = DATASET_LOCATION + 'WagesPerCountry_WorldBank.csv' 
+WAGE_DATASET_LOCATION = DATASET_LOCATION + 'WagesPerCountry_WorldBank.csv'
+WAGE_UK_DATASET_LOCATION = DATASET_LOCATION + 'CBP-8456.csv' 
 
 def TrainModels(cpiInflationDataSplit, wageDataClean):
     xTrain_CPI, yTrain_CPI = cpiInflationDataSplit[:1900, :48], cpiInflationDataSplit[:1900, -5:]
@@ -53,7 +54,7 @@ def TrainModels(cpiInflationDataSplit, wageDataClean):
     xTrain_Wages, yTrain_Wages = wageDataClean[1:200,:59], wageDataClean[1:200, -5:]
     xValid_Wages, yValid_Wages = wageDataClean[200:220,:59], wageDataClean[200:220, -5:]
 
-    cpiModels = GenerateModels(200, 100)
+    cpiModels = GenerateModels(240, 100)
     cpiPercentageErrors = []
 
     for index, model in enumerate(cpiModels):
@@ -66,7 +67,7 @@ def TrainModels(cpiInflationDataSplit, wageDataClean):
         cpiTrainingHistoryFile.close()
         print(str(index + 1) +' out of' + str(len(cpiModels)) + 'trained')
 
-    wageModels = GenerateModels(200, 100)
+    wageModels = GenerateModels(240, 100)
     wagePercentageErrors = []
 
     for index, model in enumerate(wageModels):
@@ -90,10 +91,10 @@ def TrainModels(cpiInflationDataSplit, wageDataClean):
 def GenerateModels(maxNeurons, maxEpochs):
     models = []
     
-    modelsExpected = (maxNeurons / 50) * (maxEpochs / 20) * 3
+    modelsExpected = (maxNeurons / 60) * (maxEpochs / 20) * 3
 
     modelsGenerated = 0
-    for neurons in range(50, maxNeurons + 1, 50):
+    for neurons in range(60, maxNeurons + 1 60):
         for epochs in range(20, maxEpochs + 1, 20):
             for type in range(3):
                 if type == 0:
@@ -103,7 +104,7 @@ def GenerateModels(maxNeurons, maxEpochs):
                 elif type == 2:
                     models.append(DP_RNN(neurons, epochs, GRU_RNN))
                 modelsGenerated += 1
-                print( str(modelsGenerated) + ' out of ' + str(modelsExpected) + ' generated.')
+                print(str(modelsGenerated) + ' out of ' + str(modelsExpected) + ' generated.')
     return models
 
 
@@ -147,9 +148,12 @@ def GetCountryCPIData(country, cpiMetaData, cpiData):
 
 cpiInflationData = ReadCSV(CPI_DATASET_LOCATION)
 wagesPerCountry = ReadCSV(WAGE_DATASET_LOCATION)
+ukWagesByLocation = ReadCSV(WAGE_UK_DATASET_LOCATION)
 
 cpiInflationMetaData, cpiInflationDataSplit = IngestCPIData(cpiInflationData)
 wageMetaData, wageDataClean = IngestWageData(wagesPerCountry)
+ukMetaData, ukWagesByLocation = IngestUKData(ukWagesByLocation)
+
 
 cpi_rnn = None
 wage_rnn = None

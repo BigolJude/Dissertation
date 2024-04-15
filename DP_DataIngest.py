@@ -21,7 +21,31 @@ def IngestWageData(wageData):
     wageMetaData, wageData = __CleanData(wageData, WAGES_ROW_LENGTH, WAGES_COLUMN_START, labelIndex=FIRST)
     wageData = __FormatData(wageData)
     wageMetaData = __CleanDoubleStrings(wageMetaData)
-    return wageMetaData, wageData    
+    return wageMetaData, wageData
+
+def IngestUKData(ukData):
+    ukData = ukData[6:19]
+    ukDataCleaned = []
+    ukMetaData = []
+    for row in ukData:
+        max = 0
+        place = ''
+        dataRow = []
+        metaDataRow = []
+        for index, string in enumerate(row[1:26]):
+            if index == 0:
+                place = string
+            else:
+                number = float(string)
+                if max < number:
+                    max = number
+                dataRow.append(number)
+        metaDataRow.append(place)
+        metaDataRow.append(max)
+        ukMetaData.append(metaDataRow)
+        ukDataCleaned.append([x / max for x in dataRow])
+    return ukMetaData, ukDataCleaned
+
 
 def __CleanData(data, dataRowLength, dataColumnStart, labelIndex):
     data = data[1:]
@@ -122,3 +146,4 @@ def __CleanDoubleStrings(dataSet):
                 cleanedDataRow.append(dataRow[i])
         cleanedDataSet.append(cleanedDataRow)
     return cleanedDataSet
+
