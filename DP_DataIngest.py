@@ -44,7 +44,7 @@ def IngestUKData(ukData):
         metaDataRow.append(max)
         ukMetaData.append(metaDataRow)
         ukDataCleaned.append([x / max for x in dataRow])
-    return ukMetaData, ukDataCleaned
+    return ukMetaData, __FormatData(ukDataCleaned)
 
 
 def __CleanData(data, dataRowLength, dataColumnStart, labelIndex):

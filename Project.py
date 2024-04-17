@@ -20,8 +20,8 @@ from DP_CSV import *
 
 # Const ints
 FIRST = 0
-AVERAGE_COL = 1000
-AVERAGE_RENTAL = 1000
+AVERAGE_COL = 900
+AVERAGE_RENTAL = 1220
 AVERAGE_OCOL_COUNTRY = AVERAGE_RENTAL + AVERAGE_COL
 
 # Const strings
@@ -54,7 +54,7 @@ def TrainModels(cpiInflationDataSplit, wageDataClean):
     xTrain_Wages, yTrain_Wages = wageDataClean[1:200,:59], wageDataClean[1:200, -5:]
     xValid_Wages, yValid_Wages = wageDataClean[200:220,:59], wageDataClean[200:220, -5:]
 
-    cpiModels = GenerateModels(240, 100)
+    cpiModels = GenerateModels(100, 100)
     cpiPercentageErrors = []
 
     for index, model in enumerate(cpiModels):
@@ -67,7 +67,7 @@ def TrainModels(cpiInflationDataSplit, wageDataClean):
         cpiTrainingHistoryFile.close()
         print(str(index + 1) +' out of' + str(len(cpiModels)) + 'trained')
 
-    wageModels = GenerateModels(240, 100)
+    wageModels = GenerateModels(100, 100)
     wagePercentageErrors = []
 
     for index, model in enumerate(wageModels):
@@ -90,21 +90,9 @@ def TrainModels(cpiInflationDataSplit, wageDataClean):
 
 def GenerateModels(maxNeurons, maxEpochs):
     models = []
-    
-    modelsExpected = (maxNeurons / 60) * (maxEpochs / 20) * 3
-
-    modelsGenerated = 0
-    for neurons in range(60, maxNeurons + 1 60):
-        for epochs in range(20, maxEpochs + 1, 20):
-            for type in range(3):
-                if type == 0:
-                    models.append(DP_RNN(neurons, epochs, SIMPLE_RNN))
-                elif type == 1:
-                    models.append(DP_RNN(neurons, epochs, LSTM_RNN))
-                elif type == 2:
-                    models.append(DP_RNN(neurons, epochs, GRU_RNN))
-                modelsGenerated += 1
-                print(str(modelsGenerated) + ' out of ' + str(modelsExpected) + ' generated.')
+    models.append(DP_RNN(maxNeurons, maxEpochs, SIMPLE_RNN))
+    models.append(DP_RNN(maxNeurons, maxEpochs, LSTM_RNN))
+    models.append(DP_RNN(maxNeurons, maxEpochs, GRU_RNN))
     return models
 
 
@@ -186,13 +174,20 @@ countryCPI = numpy.array(countryCPIData[FIRST])
 countryWages = numpy.array(countryWageData[FIRST])
 
 cpi_prediction = cpi_rnn.GetModel().predict(countryCPI)
-wages_prediction = wage_rnn.GetModel().predict(countryWages)
+wages_prediction = wage_rnn.GetModel().predict(ukWagesByLocation)
 
 lithaunianMaxWages = 0
 
 countryCPIData = RescaleDataRow(countryCPIData[FIRST], countryCPIMetaData[FIRST][1])
 
 val = countryCPIData[FIRST][len(countryCPIData[FIRST]) - 1]
+
+ukWageValues = []
+ukWagePredictions = []
+
+for index, wages in enumerate(ukWagesByLocation):
+    ukWageValues.append(RescaleDataRow(RescaleDataRow(wages, ukMetaData[index][1]), 52))
+    ukWagePredictions.append(RescaleDataRow(RescaleDataRow(wages_prediction, ukMetaData[index][1]), 52))
 
 countryCPIData = [x / val for x in countryCPIData]
 countryCPIData = RescaleDataRow(countryCPIData, AVERAGE_OCOL_COUNTRY * 12)
@@ -201,8 +196,34 @@ countryWageData = RescaleDataRow(countryWageData[FIRST], countryWageMetaData[1])
 cpi_prediction = RescaleDataRow(cpi_prediction, countryCPIMetaData[FIRST][1])
 cpi_prediction = [x / val for x in cpi_prediction]
 cpi_prediction = RescaleDataRow(cpi_prediction[FIRST], AVERAGE_OCOL_COUNTRY * 12)
-wages_prediction = RescaleDataRow(wages_prediction[FIRST], countryWageMetaData[1])
 
-DP_GraphHelper.PlotCountryPrediction(countryWageData[FIRST][10:], wages_prediction, countryCPIData[FIRST], cpi_prediction)
+DP_GraphHelper.PlotCountryPrediction(ukWageValues[0],
+                                     ukWageValues[1],
+                                     ukWageValues[2],
+                                     ukWageValues[3],
+                                     ukWageValues[4],
+                                     ukWageValues[5],
+                                     ukWageValues[6],
+                                     ukWageValues[7],
+                                     ukWageValues[8],
+                                     ukWageValues[9],
+                                     ukWageValues[10],
+                                     ukWageValues[11],
+                                     ukWagePredictions[0][0],
+                                     ukWagePredictions[1][0],
+                                     ukWagePredictions[2][0],
+                                     ukWagePredictions[3][0],
+                                     ukWagePredictions[4][0],
+                                     ukWagePredictions[5][0],
+                                     ukWagePredictions[6][0],
+                                     ukWagePredictions[7][0],
+                                     ukWagePredictions[8][0],
+                                     ukWagePredictions[9][0],
+                                     ukWagePredictions[10][0],
+                                     ukWagePredictions[11][0],
+                                     countryCPIData[FIRST][28:],
+                                     cpi_prediction)
+
+##DP_GraphHelper.PlotCountryPrediction(countryWageData[FIRST][10:], wages_prediction, countryCPIData[FIRST], cpi_prediction)
 
 print('done')
