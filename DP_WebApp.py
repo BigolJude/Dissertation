@@ -4,7 +4,6 @@ import dash_leaflet as DashLeaflet
 from dash_extensions.javascript import assign
 from DP_CSV import *
 
-
 def FormatResults(results):
     formattedResults = []
     for result in results:
@@ -26,20 +25,30 @@ def CalculateExpectedWages(results):
         expectedWages.append(expectedWageRow)
     return expectedWages
 
+colorScale = ['#FFEDA0', '#FED976', '#FEB24C', '#FD8D3C', '#FC4E2A', '#E31A1C', '#BD0026', '#800026']
 classes = [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000]
-results = ReadCSV('assets/UKWageResults.csv')
+style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
 
+results = ReadCSV('assets/UKWageResults.csv')
 results = FormatResults(results)
 expectedWages = CalculateExpectedWages(results)
 
-style_handle = assign("""function(feature, context){
-    const {classes, numbers, results} = context.hideout;
-    
-    for (let i = 0; i < classes.length; i++)
-      {
-        if (value >)
-        return {fillColor: 'grey', color: 'grey'}
-      }
+styleHandle = assign("""function(feature, context){
+    const {classes, colorScale, expectedWages, style} = context.hideout;
+    for (let countyIndex = 0; countyIndex < expectedWages.length; countyIndex++)
+    {
+        for (let i = 0; i < classes.length; i++)
+        {
+            if (expectedWages[countyIndex][0].includes(feature.properties.name))
+            {
+                if (expectedWages[countyIndex][expectedWages.length - 1] > classes[i])
+                {
+                    style.fillColor = colorScale[i]; 
+                }
+            }
+        }           
+    }
+    return style;
 }""")
 
 app = Dash(name=__name__, external_stylesheets=[DashBootstrap.themes.SLATE])
@@ -51,7 +60,7 @@ app.layout = html.Div([
             DashLeaflet.Map([
                 DashLeaflet.TileLayer(),
                 DashLeaflet.GeoJSON(url="/assets/eer.json", zoomToBounds=True, id="geojson",
-                                   hideout=dict(selected=[]), style=style_handle)
+                                   hideout=dict(classes=classes, colorScale=colorScale, expectedWages=expectedWages, style=style), style=styleHandle)
                 ], style={'height': '50vh'}, center=[40, 10], zoom=6)
         ],style={
             'display': 'flex',
