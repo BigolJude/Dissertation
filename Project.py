@@ -142,7 +142,6 @@ cpiInflationMetaData, cpiInflationDataSplit = IngestCPIData(cpiInflationData)
 wageMetaData, wageDataClean = IngestWageData(wagesPerCountry)
 ukMetaData, ukWagesByLocation = IngestUKData(ukWagesByLocation)
 
-
 cpi_rnn = None
 wage_rnn = None
 
@@ -182,48 +181,30 @@ countryCPIData = RescaleDataRow(countryCPIData[FIRST], countryCPIMetaData[FIRST]
 
 val = countryCPIData[FIRST][len(countryCPIData[FIRST]) - 1]
 
-ukWageValues = []
-ukWagePredictions = []
+exportData = []
 
 for index, wages in enumerate(ukWagesByLocation):
-    ukWageValues.append(RescaleDataRow(RescaleDataRow(wages, ukMetaData[index][1]), 52))
-    ukWagePredictions.append(RescaleDataRow(RescaleDataRow(wages_prediction, ukMetaData[index][1]), 52))
+    ukWageValues = (RescaleDataRow(RescaleDataRow(wages, ukMetaData[index][1]), 52))
+    ukWagePredictions = (RescaleDataRow(RescaleDataRow(wages_prediction, ukMetaData[index][1]), 52))
+    exportData.append(COMMA_SEPARATOR.join([
+        ukMetaData[index][FIRST], 
+        COMMA_SEPARATOR.join([str(int(round(x[FIRST], 0))) for x in ukWageValues]), 
+        COMMA_SEPARATOR.join([str(int(round(x[FIRST], 0))) for x in ukWagePredictions])]))
 
 countryCPIData = [x / val for x in countryCPIData]
 countryCPIData = RescaleDataRow(countryCPIData, AVERAGE_OCOL_COUNTRY * 12)
-countryWageData = RescaleDataRow(countryWageData[FIRST], countryWageMetaData[1])
 
 cpi_prediction = RescaleDataRow(cpi_prediction, countryCPIMetaData[FIRST][1])
 cpi_prediction = [x / val for x in cpi_prediction]
 cpi_prediction = RescaleDataRow(cpi_prediction[FIRST], AVERAGE_OCOL_COUNTRY * 12)
 
-DP_GraphHelper.PlotCountryPrediction(ukWageValues[0],
-                                     ukWageValues[1],
-                                     ukWageValues[2],
-                                     ukWageValues[3],
-                                     ukWageValues[4],
-                                     ukWageValues[5],
-                                     ukWageValues[6],
-                                     ukWageValues[7],
-                                     ukWageValues[8],
-                                     ukWageValues[9],
-                                     ukWageValues[10],
-                                     ukWageValues[11],
-                                     ukWagePredictions[0][0],
-                                     ukWagePredictions[1][0],
-                                     ukWagePredictions[2][0],
-                                     ukWagePredictions[3][0],
-                                     ukWagePredictions[4][0],
-                                     ukWagePredictions[5][0],
-                                     ukWagePredictions[6][0],
-                                     ukWagePredictions[7][0],
-                                     ukWagePredictions[8][0],
-                                     ukWagePredictions[9][0],
-                                     ukWagePredictions[10][0],
-                                     ukWagePredictions[11][0],
-                                     countryCPIData[FIRST][28:],
-                                     cpi_prediction)
+exportData.append(COMMA_SEPARATOR.join([
+    CPI_DATASET,
+    COMMA_SEPARATOR.join([str(int(round(x[FIRST], 0))) for x in countryCPIData[FIRST][len(ukWageValues) - 4:]]), 
+    COMMA_SEPARATOR.join([str(int(round(x, 0))) for x in cpi_prediction])]))
 
-##DP_GraphHelper.PlotCountryPrediction(countryWageData[FIRST][10:], wages_prediction, countryCPIData[FIRST], cpi_prediction)
+exportData = [[x] for x in exportData]
+
+WriteCSV("assets/UKWageResults.csv", exportData)
 
 print('done')
