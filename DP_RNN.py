@@ -25,7 +25,7 @@ class DP_RNN():
 
     def train(self, xTrain, yTrain, xValid, yValid, showHistory, dataset):
         self.__BuildModel(keras_tuner.HyperParameters())
-        tuner = keras_tuner.Hyperband(self.__BuildModel, project_name=self.GetModelDescription(), objective=MEAN_ABSOLUTE_ERROR_VAL, max_epochs=20)
+        tuner = keras_tuner.Hyperband(self.__BuildModel, project_name=self.GetModelDescription() + '_' + dataset, objective=MEAN_ABSOLUTE_ERROR_VAL, max_epochs=20)
         tuner.search(xTrain, yTrain, epochs=10 , validation_data=[xValid, yValid])
         self.__rnn = tuner.get_best_models()[FIRST]
         history = self.__rnn.fit(xTrain, yTrain, epochs=self.__epochs , validation_data=[xValid, yValid])

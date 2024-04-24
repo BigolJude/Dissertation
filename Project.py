@@ -20,9 +20,7 @@ from DP_CSV import *
 
 # Const ints
 FIRST = 0
-AVERAGE_COL = 900
-AVERAGE_RENTAL = 1220
-AVERAGE_OCOL_COUNTRY = AVERAGE_RENTAL + AVERAGE_COL
+
 
 # Const strings
 COMMA_SEPARATOR = ','
@@ -41,11 +39,12 @@ APPEND = 'a'
 MODEL_LOCATION = 'generated_models/'
 DATASET_LOCATION = 'datasets/'
 
-CPI_DATASET_LOCATION = DATASET_LOCATION + 'Inflation-data - hcpi_m.csv'
 CPI_MODEL_LOCATION = MODEL_LOCATION + 'cpi_model.keras'
 WAGE_MODEL_LOCATION = MODEL_LOCATION + 'wage_model.keras'
+CPI_DATASET_LOCATION = DATASET_LOCATION + 'Inflation-data - hcpi_m.csv'
 WAGE_DATASET_LOCATION = DATASET_LOCATION + 'WagesPerCountry_WorldBank.csv'
 WAGE_UK_DATASET_LOCATION = DATASET_LOCATION + 'CBP-8456.csv' 
+OCOL_UK_DATASET_LOCATION = DATASET_LOCATION + 'UKCOLArea.csv'
 
 def TrainModels(cpiInflationDataSplit, wageDataClean):
     xTrain_CPI, yTrain_CPI = cpiInflationDataSplit[:1900, :48], cpiInflationDataSplit[:1900, -5:]
@@ -134,13 +133,15 @@ def GetCountryCPIData(country, cpiMetaData, cpiData):
             break
     return cpiDataRow, cpiMetaDataRow
 
-cpiInflationData = ReadCSV(CPI_DATASET_LOCATION)
-wagesPerCountry = ReadCSV(WAGE_DATASET_LOCATION)
-ukWagesByLocation = ReadCSV(WAGE_UK_DATASET_LOCATION)
+cpiInflationDataset = ReadCSV(CPI_DATASET_LOCATION)
+wagesDataset = ReadCSV(WAGE_DATASET_LOCATION)
+ukWagesDataset = ReadCSV(WAGE_UK_DATASET_LOCATION)
+ukCOLDataset = ReadCSV(OCOL_UK_DATASET_LOCATION)
 
-cpiInflationMetaData, cpiInflationDataSplit = IngestCPIData(cpiInflationData)
-wageMetaData, wageDataClean = IngestWageData(wagesPerCountry)
-ukMetaData, ukWagesByLocation = IngestUKData(ukWagesByLocation)
+cpiInflationMetaData, cpiInflationDataSplit = IngestCPIData(cpiInflationDataset)
+wageMetaData, wageDataClean = IngestWageData(wagesDataset)
+ukMetaData, ukWagesByLocation = IngestUKWageData(ukWagesDataset)
+ukCOLByLocation = IngestUKCOLData(ukCOLDataset)
 
 cpi_rnn = None
 wage_rnn = None
@@ -185,23 +186,34 @@ exportData = []
 
 for index, wages in enumerate(ukWagesByLocation):
     ukWageValues = (RescaleDataRow(RescaleDataRow(wages, ukMetaData[index][1]), 52))
-    ukWagePredictions = (RescaleDataRow(RescaleDataRow(wages_prediction, ukMetaData[index][1]), 52))
-    exportData.append(COMMA_SEPARATOR.join([
-        ukMetaData[index][FIRST], 
-        COMMA_SEPARATOR.join([str(int(round(x[FIRST], 0))) for x in ukWageValues]), 
-        COMMA_SEPARATOR.join([str(int(round(x[FIRST], 0))) for x in ukWagePredictions])]))
+    ukWagePredictions = (RescaleDataRow(RescaleDataRow(wages_prediction[FIRST], ukMetaData[index][1]), 52))
+    exportData.append(
+        COMMA_SEPARATOR.join([
+            ukMetaData[index][FIRST], 
+            COMMA_SEPARATOR.join([str(int(round(x[FIRST], 0))) for x in ukWageValues]), 
+            COMMA_SEPARATOR.join([str(int(round(x, 0))) for x in ukWagePredictions])]))
 
 countryCPIData = [x / val for x in countryCPIData]
-countryCPIData = RescaleDataRow(countryCPIData, AVERAGE_OCOL_COUNTRY * 12)
 
 cpi_prediction = RescaleDataRow(cpi_prediction, countryCPIMetaData[FIRST][1])
 cpi_prediction = [x / val for x in cpi_prediction]
-cpi_prediction = RescaleDataRow(cpi_prediction[FIRST], AVERAGE_OCOL_COUNTRY * 12)
 
-exportData.append(COMMA_SEPARATOR.join([
-    CPI_DATASET,
-    COMMA_SEPARATOR.join([str(int(round(x[FIRST], 0))) for x in countryCPIData[FIRST][len(ukWageValues) - 4:]]), 
-    COMMA_SEPARATOR.join([str(int(round(x, 0))) for x in cpi_prediction])]))
+countryCPIData = [x[FIRST] for x in countryCPIData[FIRST]]
+
+for index, county in enumerate(ukCOLByLocation):
+    countyCOLData = RescaleDataRow(countryCPIData, (county[1] + county[2]) * 12)
+    countyCOLPredictions = RescaleDataRow(cpi_prediction[FIRST], (county[1] + county[2]) * 12)
+    exportData.append(
+        COMMA_SEPARATOR.join([
+            CPI_DATASET,
+            county[0],
+            COMMA_SEPARATOR.join([str(int(round(x, 0))) for x in countyCOLData[(len(countyCOLData) - len(wages)):]]), 
+            COMMA_SEPARATOR.join([str(int(round(x, 0))) for x in countyCOLPredictions])]))
+
+exportData.append(
+    COMMA_SEPARATOR.join([
+        'dates',
+        COMMA_SEPARATOR.join([str(x) for x in range(2002, 2030, 1)])]))
 
 exportData = [[x] for x in exportData]
 
