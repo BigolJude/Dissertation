@@ -38,9 +38,10 @@ def CalculateExpectedWages(results, colResults):
 def GetYearIndex(year):
     return year - 2003
 
-colorScale = ['#E51F1F','#F2A134','#F7E379','#BBDB44','#44CE1B']
-classes = [2000, 4000, 6000, 8000, 10000]
-style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
+COLOUR_SCALE = ['#E51F1F','#F2A134','#F7E379','#BBDB44','#44CE1B']
+CLASSES = [2000, 4000, 6000, 8000, 10000]
+MODEL_OPTIONS = ['Simple','LSTM','GRU']
+STYLE = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
 
 results = ReadCSV('assets/UKWageResults.csv')
 results, colResults = FormatResults(results)
@@ -80,7 +81,23 @@ app.layout = html.Div([
                        marks=None, 
                        tooltip={"always_visible":True,
                                 "placement": "bottom"},
-                       id='date-slider')
+                       id='date-slider'),
+            html.Div([
+                html.Div([
+                    html.H3(children='Wages model.'),
+                    dcc.RadioItems(MODEL_OPTIONS, value='GRU', inline=True)
+                ], style={'padding':'1vh'}),
+                html.Div([
+                    html.H3(children='Cost of living model.'),
+                    dcc.RadioItems(MODEL_OPTIONS, value='Simple', inline=True)
+                ], style={'padding':'1vh'})
+            ], style={
+                'display': 'flex',
+                'flexDirection': 'row',
+                'justifyContent': 'center'
+            }),
+            html.H2(children='Evaluation of the Models.'),
+            html.P(children='The models provided have intruiging results. The current best models are '),
         ],style={
             'display': 'flex',
             'flexDirection': 'column',
@@ -88,7 +105,7 @@ app.layout = html.Div([
     ], style={
         'display': 'flex',
         'justifyContent':'center',
-        'alignContent':'centre'})
+        'alignContent':'center'})
 ])
 
 @callback(
@@ -100,7 +117,7 @@ def updateOutput(value):
                 DashLeaflet.GeoJSON(url="/assets/eer.json", 
                                     zoomToBounds=True, 
                                     id="geojson",
-                                    hideout=dict(classes=classes, colorScale=colorScale, expectedWages=expectedWages, style=style, year=GetYearIndex(value)), 
+                                    hideout=dict(classes=CLASSES, colorScale=COLOUR_SCALE, expectedWages=expectedWages, style=STYLE, year=GetYearIndex(value)), 
                                     style=styleHandle)
                 ], style={'height': '50vh'}, center=[40, 10], zoom=6)
 
