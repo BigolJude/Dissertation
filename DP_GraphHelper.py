@@ -66,7 +66,7 @@ def PlotPredictedData(current, predicted, expected=[]):
 
 def __PlotPredictedData(current, predicted, predictionRange, expected=[]):
     if(len(predicted) > 1):
-        f,axes = pyplot.subplots(1, 2, figsize=(15,8))
+        f,axes = pyplot.subplots(2, 2, figsize=(15,8))
         for idx, ax in enumerate(axes.flatten()):
             ax.plot(current[idx], LINED_DATA_POINTS_BLUE)
             ax.plot(predictionRange, predicted[idx], LINED_DATA_CROSSES_RED)

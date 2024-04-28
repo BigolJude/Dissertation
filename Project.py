@@ -21,7 +21,6 @@ from DP_CSV import *
 # Const ints
 FIRST = 0
 
-
 # Const strings
 COMMA_SEPARATOR = ','
 VERTICAL_ROTATION = 'vertical'
@@ -34,13 +33,14 @@ SIMPLE_RNN = 'Simple'
 LSTM_RNN = 'LSTM'
 GRU_RNN = 'GRU'
 APPEND = 'a'
+MODEL_FILE_TYPE = '.keras'
+MODEL_TYPES = [SIMPLE_RNN, LSTM_RNN, GRU_RNN]
 
 # File Paths
 MODEL_LOCATION = 'generated_models/'
 DATASET_LOCATION = 'datasets/'
+ASSETS_LOCATION = 'assets/'
 
-CPI_MODEL_LOCATION = MODEL_LOCATION + 'cpi_model.keras'
-WAGE_MODEL_LOCATION = MODEL_LOCATION + 'wage_model.keras'
 CPI_DATASET_LOCATION = DATASET_LOCATION + 'Inflation-data - hcpi_m.csv'
 WAGE_DATASET_LOCATION = DATASET_LOCATION + 'WagesPerCountry_WorldBank.csv'
 WAGE_UK_DATASET_LOCATION = DATASET_LOCATION + 'CBP-8456.csv' 
@@ -53,7 +53,7 @@ def TrainModels(cpiInflationDataSplit, wageDataClean):
     xTrain_Wages, yTrain_Wages = wageDataClean[1:200,:59], wageDataClean[1:200, -5:]
     xValid_Wages, yValid_Wages = wageDataClean[200:220,:59], wageDataClean[200:220, -5:]
 
-    cpiModels = GenerateModels(100, 100)
+    cpiModels = GenerateModels(80, 50)
     cpiPercentageErrors = []
 
     for index, model in enumerate(cpiModels):
@@ -61,12 +61,13 @@ def TrainModels(cpiInflationDataSplit, wageDataClean):
         errorRate = history.history['mean_absolute_percentage_error']
 
         cpiPercentageErrors.append(errorRate)
-        cpiTrainingHistoryFile = open("CPI_Models_TrainingHistory.txt", APPEND)
-        cpiTrainingHistoryFile.write(CPI_DATASET + '_' + model.GetModelDescription() + ', ' + str(errorRate[len(errorRate) - 1]) + '\n')
+        cpiTrainingHistoryFile = open("assets/CPI_Models_TrainingHistory.csv", APPEND)
+        cpiTrainingHistoryFile.write(CPI_DATASET + '_' + model.GetModelType() + ', ' + str(errorRate[len(errorRate) - 1]) + '\n')
         cpiTrainingHistoryFile.close()
+        model.SaveModel(MODEL_LOCATION + CPI_DATASET + '_' + model.GetModelType() + MODEL_FILE_TYPE)
         print(str(index + 1) +' out of' + str(len(cpiModels)) + 'trained')
 
-    wageModels = GenerateModels(100, 100)
+    wageModels = GenerateModels(140, 150)
     wagePercentageErrors = []
 
     for index, model in enumerate(wageModels):
@@ -74,26 +75,19 @@ def TrainModels(cpiInflationDataSplit, wageDataClean):
 
         errorRate = history.history['mean_absolute_percentage_error']
         wagePercentageErrors.append(errorRate)
-        wageTrainingHistoryFile = open("Wage_Models_TrainingHistory.txt", APPEND)
-        wageTrainingHistoryFile.write(CPI_DATASET + '_' + model.GetModelDescription() + ', ' + str(errorRate[len(errorRate) - 1]) + '\n')
+        wageTrainingHistoryFile = open("assets/Wage_Models_TrainingHistory.csv", APPEND)
+        wageTrainingHistoryFile.write(CPI_DATASET + '_' + model.GetModelType() + ', ' + str(errorRate[len(errorRate) - 1]) + '\n')
         wageTrainingHistoryFile.close()
+        model.SaveModel(MODEL_LOCATION + WAGE_DATASET + '_' + model.GetModelType() + MODEL_FILE_TYPE)
         print(str(index + 1) +' out of' + str(len(wageModels)) + 'trained')
 
-
-    cpiRnn = GetBestModel(cpiPercentageErrors, cpiModels)
-    wageRnn = GetBestModel(wagePercentageErrors, wageModels) 
-
-    cpiRnn.SaveModel(CPI_MODEL_LOCATION)
-    wageRnn.SaveModel(WAGE_MODEL_LOCATION)
-    return cpiRnn, wage_rnn
+    return cpiModels, wageModels
 
 def GenerateModels(maxNeurons, maxEpochs):
     models = []
-    models.append(DP_RNN(maxNeurons, maxEpochs, SIMPLE_RNN))
-    models.append(DP_RNN(maxNeurons, maxEpochs, LSTM_RNN))
-    models.append(DP_RNN(maxNeurons, maxEpochs, GRU_RNN))
+    for model in MODEL_TYPES:
+        models.append(DP_RNN(maxNeurons, maxEpochs, model))
     return models
-
 
 def GetBestModel(percentageErrors, models):
     minError = 100
@@ -143,29 +137,32 @@ wageMetaData, wageDataClean = IngestWageData(wagesDataset)
 ukMetaData, ukWagesByLocation = IngestUKWageData(ukWagesDataset)
 ukCOLByLocation = IngestUKCOLData(ukCOLDataset)
 
-cpi_rnn = None
-wage_rnn = None
-
 print("datasets loaded.")
 
-while((wage_rnn == None) | (cpi_rnn == None)):
-    try:
-        cpi_rnn = DP_RNN(CPI_MODEL_LOCATION)
-        wage_rnn = DP_RNN(WAGE_MODEL_LOCATION)
-    except:
-        print('models not found continuing with training.')
+cpiModels = []
+wageModels = []
 
-    if(wage_rnn == None) | (cpi_rnn == None):
-        cpi_rnn, wage_rnn = TrainModels(cpiInflationDataSplit, wageDataClean)
+while((len(cpiModels) == 0) | (len(wageModels) == 0)):
+    try:
+        for model in MODEL_TYPES:
+            cpiModels.append(DP_RNN(MODEL_LOCATION + CPI_DATASET + '_' + model + MODEL_FILE_TYPE))
+        for model in MODEL_TYPES:
+            wageModels.append(DP_RNN(MODEL_LOCATION + WAGE_DATASET + '_' + model + MODEL_FILE_TYPE))
+        break
+    except:
+        print('Some models not found continuing with training.')
+
+    cpiModels, wageModels = TrainModels(cpiInflationDataSplit, wageDataClean)
 
 xTest_CPI, yTest_CPI = cpiInflationDataSplit[2000:, :48], cpiInflationDataSplit[2000:, -5:]
-cpi_prediction = cpi_rnn.GetModel().predict(xTest_CPI)
+for cpiModel in cpiModels:
+    cpiPrediction = cpiModel.GetModel().predict(xTest_CPI)
+    DP_GraphHelper.PlotPredictedData(xTest_CPI, cpiPrediction, yTest_CPI)
 
 xTest_Wages, yTest_Wages = wageDataClean[210:, :59], wageDataClean[210:, -5:]
-wages_prediction = wage_rnn.GetModel().predict(xTest_Wages)
-
-DP_GraphHelper.PlotPredictedData(xTest_CPI, cpi_prediction, yTest_CPI)
-DP_GraphHelper.PlotPredictedData(xTest_Wages, cpi_prediction, yTest_Wages)
+for wageModel in wageModels:
+    wagesPrediction = wageModel.GetModel().predict(xTest_Wages)
+    DP_GraphHelper.PlotPredictedData(xTest_Wages, wagesPrediction, yTest_Wages)
 
 countryWageData, countryWageMetaData = GetCountryWageData(COUNTRY, wageMetaData, wageDataClean)
 countryCPIData, countryCPIMetaData = GetCountryCPIData(COUNTRY, cpiInflationMetaData, cpiInflationDataSplit)
@@ -173,50 +170,41 @@ countryCPIData, countryCPIMetaData = GetCountryCPIData(COUNTRY, cpiInflationMeta
 countryCPI = numpy.array(countryCPIData[FIRST])
 countryWages = numpy.array(countryWageData[FIRST])
 
-cpi_prediction = cpi_rnn.GetModel().predict(countryCPI)
-wages_prediction = wage_rnn.GetModel().predict(ukWagesByLocation)
-
-lithaunianMaxWages = 0
+for modelIndex, wageModel in enumerate(wageModels):
+    wageExportData = []
+    wagesPrediction = wageModel.GetModel().predict(ukWagesByLocation)
+    for index, wages in enumerate(ukWagesByLocation):
+        ukWageValues = (RescaleDataRow(RescaleDataRow(wages, ukMetaData[index][1]), 52))
+        ukWagePredictions = (RescaleDataRow(RescaleDataRow(wagesPrediction[FIRST], ukMetaData[index][1]), 52))
+        wageExportData.append(
+            COMMA_SEPARATOR.join([
+                ukMetaData[index][FIRST], 
+                COMMA_SEPARATOR.join([str(int(round(x[FIRST], 0))) for x in ukWageValues]), 
+                COMMA_SEPARATOR.join([str(int(round(x, 0))) for x in ukWagePredictions])]))
+    wageExportData = [[x] for x in wageExportData]
+    WriteCSV(ASSETS_LOCATION + 'UKWageResults_' + MODEL_TYPES[modelIndex] + '.csv', wageExportData)
 
 countryCPIData = RescaleDataRow(countryCPIData[FIRST], countryCPIMetaData[FIRST][1])
+targetIndexVal = countryCPIData[FIRST][len(countryCPIData[FIRST]) - 1]
 
-val = countryCPIData[FIRST][len(countryCPIData[FIRST]) - 1]
-
-exportData = []
-
-for index, wages in enumerate(ukWagesByLocation):
-    ukWageValues = (RescaleDataRow(RescaleDataRow(wages, ukMetaData[index][1]), 52))
-    ukWagePredictions = (RescaleDataRow(RescaleDataRow(wages_prediction[FIRST], ukMetaData[index][1]), 52))
-    exportData.append(
-        COMMA_SEPARATOR.join([
-            ukMetaData[index][FIRST], 
-            COMMA_SEPARATOR.join([str(int(round(x[FIRST], 0))) for x in ukWageValues]), 
-            COMMA_SEPARATOR.join([str(int(round(x, 0))) for x in ukWagePredictions])]))
-
-countryCPIData = [x / val for x in countryCPIData]
-
-cpi_prediction = RescaleDataRow(cpi_prediction, countryCPIMetaData[FIRST][1])
-cpi_prediction = [x / val for x in cpi_prediction]
-
+countryCPIData = [x / targetIndexVal for x in countryCPIData]
 countryCPIData = [x[FIRST] for x in countryCPIData[FIRST]]
 
-for index, county in enumerate(ukCOLByLocation):
-    countyCOLData = RescaleDataRow(countryCPIData, (county[1] + county[2]) * 12)
-    countyCOLPredictions = RescaleDataRow(cpi_prediction[FIRST], (county[1] + county[2]) * 12)
-    exportData.append(
-        COMMA_SEPARATOR.join([
-            CPI_DATASET,
-            county[0],
-            COMMA_SEPARATOR.join([str(int(round(x, 0))) for x in countyCOLData[(len(countyCOLData) - len(wages)):]]), 
-            COMMA_SEPARATOR.join([str(int(round(x, 0))) for x in countyCOLPredictions])]))
-
-exportData.append(
-    COMMA_SEPARATOR.join([
-        'dates',
-        COMMA_SEPARATOR.join([str(x) for x in range(2002, 2030, 1)])]))
-
-exportData = [[x] for x in exportData]
-
-WriteCSV("assets/UKWageResults.csv", exportData)
+for index, cpiModel in enumerate(cpiModels):
+    cpiPrediction = cpiModel.GetModel().predict(countryCPI)
+    cpiPrediction = RescaleDataRow(cpiPrediction, countryCPIMetaData[FIRST][1])
+    cpiPrediction = [x / targetIndexVal for x in cpiPrediction]
+    colExportData = []
+    for county in ukCOLByLocation:
+        countyCOLData = RescaleDataRow(countryCPIData, (county[1] + county[2]) * 12)
+        countyCOLPredictions = RescaleDataRow(cpiPrediction[FIRST], (county[1] + county[2]) * 12)
+        colExportData.append(
+            COMMA_SEPARATOR.join([
+                CPI_DATASET,
+                county[0],
+                COMMA_SEPARATOR.join([str(int(round(x, 0))) for x in countyCOLData[(len(countyCOLData) - len(wages)):]]), 
+                COMMA_SEPARATOR.join([str(int(round(x, 0))) for x in countyCOLPredictions])]))
+    colExportData = [[x] for x in colExportData]
+    WriteCSV(ASSETS_LOCATION + 'UKCOLResults_' + MODEL_TYPES[index] + '.csv', colExportData)
 
 print('done')

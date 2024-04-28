@@ -12,8 +12,6 @@ window.dashExtensions = Object.assign({}, window.dashExtensions, {
                 console.log(year);
                 for (let i = 0; i < classes.length; i++) {
                     if (expectedWages[countyIndex][0].includes(feature.properties.EER13NM)) {
-                        console.log("value: " + expectedWages[countyIndex][1][year])
-                        console.log("threshold: " + classes[i])
                         if (expectedWages[countyIndex][1][year] < classes[i]) {
                             style.fillColor = colorScale[i];
                             break;

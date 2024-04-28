@@ -11,6 +11,12 @@ LSTM_SETTING = 'LSTM'
 SIMPLE_RNN_SETTING = 'Simple'
 DENSE_LAYER_ACTIVATION = 'relu'
 MEAN_ABSOLUTE_ERROR_VAL = 'mean_absolute_percentage_error'
+LAYER_1 = 'layer_1'
+LAYER_2 = 'layer_2'
+LAYER_3 = 'layer_3'
+LAYER_4 = 'layer_4'
+LAYER_5 = 'layer_5'
+LAYER_6 = 'layer_6'
 
 
 class DP_RNN():
@@ -25,12 +31,12 @@ class DP_RNN():
 
     def train(self, xTrain, yTrain, xValid, yValid, showHistory, dataset):
         self.__BuildModel(keras_tuner.HyperParameters())
-        tuner = keras_tuner.Hyperband(self.__BuildModel, project_name=self.GetModelDescription() + '_' + dataset, objective=MEAN_ABSOLUTE_ERROR_VAL, max_epochs=20)
+        tuner = keras_tuner.Hyperband(self.__BuildModel, project_name=self.GetModelType() + '_' + dataset, objective=MEAN_ABSOLUTE_ERROR_VAL, max_epochs=20)
         tuner.search(xTrain, yTrain, epochs=10 , validation_data=[xValid, yValid])
         self.__rnn = tuner.get_best_models()[FIRST]
         history = self.__rnn.fit(xTrain, yTrain, epochs=self.__epochs , validation_data=[xValid, yValid])
         if(showHistory):
-            DP_GraphHelper.PlotTrainingHistory(history, dataset, self.GetModelDescription())
+            DP_GraphHelper.PlotTrainingHistory(history, dataset, self.GetModelType())
         return history
 
     def GetModel(self):
@@ -50,28 +56,30 @@ class DP_RNN():
 
         if(self.__type == GRU_SETTING):
             rnnLayers = [
-                keras.layers.GRU(hp.Choice('units1', firstLayer),
+                keras.layers.GRU(hp.Choice(LAYER_1, firstLayer),
                                  input_shape=(None, 1), 
                                  return_sequences=True),
-                keras.layers.GRU(hp.Choice('units2', secondLayer), 
+                keras.layers.GRU(hp.Choice(LAYER_2, secondLayer), 
                                  return_sequences=True),
-                keras.layers.GRU(hp.Choice('units3', thirdLayer))]
+                keras.layers.GRU(hp.Choice(LAYER_3, thirdLayer))]
         if(self.__type == LSTM_SETTING):
             rnnLayers = [
-                keras.layers.LSTM(hp.Choice('units1', firstLayer),
+                keras.layers.LSTM(hp.Choice(LAYER_1, firstLayer),
                                  input_shape=(None, 1), 
                                  return_sequences=True),
-                keras.layers.LSTM(hp.Choice('units2', secondLayer), 
+                keras.layers.LSTM(hp.Choice(LAYER_2, secondLayer), 
                                  return_sequences=True),
-                keras.layers.LSTM(hp.Choice('units3', thirdLayer))]
+                keras.layers.LSTM(hp.Choice(LAYER_3, thirdLayer))]
         if(self.__type == SIMPLE_RNN_SETTING):
             rnnLayers = [
-                keras.layers.SimpleRNN(hp.Choice('units1', firstLayer),
+                keras.layers.SimpleRNN(hp.Choice(LAYER_1, firstLayer),
                                  input_shape=(None, 1), 
                                  return_sequences=True),
-                keras.layers.SimpleRNN(hp.Choice('units2', secondLayer), 
+                keras.layers.SimpleRNN(hp.Choice(LAYER_2, secondLayer), 
                                  return_sequences=True),
-                keras.layers.SimpleRNN(hp.Choice('units3', thirdLayer))]
+                keras.layers.SimpleRNN(hp.Choice(LAYER_3, thirdLayer))]
+        rnnLayers.append(keras.layers.Dense(hp.Choice(LAYER_4, secondLayer), activation='relu'))
+        rnnLayers.append(keras.layers.Dense(hp.Choice(LAYER_5, thirdLayer), activation='relu'))
         rnnLayers.append(keras.layers.Dense(5))
         rnn = keras.models.Sequential(rnnLayers)
         self.__learningRate_schedule = keras.optimizers.schedules.ExponentialDecay(
@@ -82,6 +90,6 @@ class DP_RNN():
         rnn.compile(loss=MEAN_ABSOLUTE_ERROR, optimizer=self.__optimizer, metrics=[keras.metrics.MeanAbsolutePercentageError()])
         return rnn
 
-    def GetModelDescription(self):
-        return str(self.__type)+ '_' + str(self.__epochs) + '_' + str(self.__initialLayerNeurons)
+    def GetModelType(self):
+        return str(self.__type)
     
